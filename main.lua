@@ -1,9 +1,11 @@
+local tween = require 'tween'
 local grid_square = 16
 local grid_width = 20
 local grid_height = 11 --+4 pixels
 local debrisIndexes = {65, 66, 149, 161, 162, 165}
 local map = {}
 local colMap = {}
+local tweens = {}
 local gravity = 5
 
 function _init()
@@ -11,9 +13,11 @@ function _init()
   -- Stash mutable game state in a capitalized global like `State` so it
   -- survives reloads; F5 calls _init again to reset.
   State = {
-    player = nil
+    player = nil,
+    characters = {}
   }
   Player(48, 16)
+  Character(64, 64)
   StonePlatform(32, 80, 6)
   PitStone(176, 112, 2 )
   SiftMap(map)
@@ -34,7 +38,7 @@ function Player(x, y)
   State.player = player
 end
 
-function Movement(p, dt)
+function PMovement(p, dt)
   local player = p
   local delta = dt
   local sprite = nil
@@ -70,6 +74,42 @@ function Movement(p, dt)
     sprite = player.spr[1]
   end
   gfx.spr_ex(sprite, player.x, player.y, player.flip, false, 0, gfx.COLOR_TRUE_WHITE, 1)
+end
+
+function Character(x, y)
+  local char = {
+    x = x,
+    y = y,
+    spr = {166, 167},
+    flip = false,
+    time = usagi.elapsed
+  }
+  table.insert(State.characters, char)
+end
+
+function CMovement(c)
+  local chars = c
+  local sprite = nil
+  for i=1, #chars do
+    if usagi.elapsed > chars[i].time + 2 then
+    local mover = tween.new(1, chars[i], {x = chars[i].x + 16}, 'outQuad')
+    table.insert(tweens, mover)
+    chars[i].time = usagi.elapsed
+    end
+  end
+end
+
+function CDraw(c)
+  local chars = c
+  local sprite = nil
+  for i=1, #chars do
+    if math.floor(usagi.elapsed % 2) == 0 then
+      sprite = chars[i].spr[2]
+    else
+      sprite = chars[i].spr[1]
+    end
+    gfx.spr_ex(sprite, chars[i].x, chars[i].y, chars[i].flip, false, 0, gfx.COLOR_TRUE_WHITE, 1)
+  end
 end
 
 function Outline()
@@ -219,7 +259,20 @@ function DrawMap(m)
   end
 end
 
+function DrawGrid()
+  for i=1, grid_width do
+    gfx.line(grid_square * i, 0, grid_square * i, usagi.GAME_H, gfx.COLOR_RED)
+  end
+  for i=1, grid_height do
+    gfx.line(0, grid_square * i, usagi.GAME_W, grid_square * i, gfx.COLOR_RED)
+  end
+end
+
 function _update(dt)
+  CMovement(State.characters)
+  for i=1, #tweens do
+    tweens[i]:update(dt)
+  end
 end
 
 function _draw(dt)
@@ -231,7 +284,9 @@ function _draw(dt)
   Chain(160, 16, 3)
   Ruin1(48, 64)
   --PitStone(176, 112, 1)
-  Movement(State.player, dt)
+  PMovement(State.player, dt)
+  CDraw(State.characters)
   CollChk(State.player, colMap)
   Outline()
+  DrawGrid()
 end
