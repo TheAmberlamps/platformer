@@ -14,13 +14,15 @@ function _init()
   -- survives reloads; F5 calls _init again to reset.
   State = {
     player = nil,
-    characters = {}
+    characters = {},
+    map = {}
   }
+  StonePlatform(32, 80, 6)
+  PitStone(176, 112, 2)
+  SiftMap(State.map)
   Player(48, 16)
   Character(64, 64)
-  StonePlatform(32, 80, 6)
-  PitStone(176, 112, 2 )
-  SiftMap(map)
+  Character(80, 64)
 end
 
 function Player(x, y)
@@ -82,19 +84,31 @@ function Character(x, y)
     y = y,
     spr = {166, 167},
     flip = false,
-    time = usagi.elapsed
+    time = usagi.elapsed,
+    mov = true
   }
   table.insert(State.characters, char)
 end
 
 function CMovement(c)
   local chars = c
-  local sprite = nil
   for i=1, #chars do
     if usagi.elapsed > chars[i].time + 2 then
-    local mover = tween.new(1, chars[i], {x = chars[i].x + 16}, 'outQuad')
-    table.insert(tweens, mover)
-    chars[i].time = usagi.elapsed
+      local mover = tween.new(1, chars[i], {x = chars[i].x + 16}, 'outQuad')
+      table.insert(tweens, mover)
+      chars[i].time = usagi.elapsed
+    end
+  end
+end
+
+function MoveScan(m, c)
+  local map = m
+  local chars = c
+  for i=1, #chars do
+    for j=1, #map do
+      if math.floor(map[j][2]) == math.floor(chars[i].x) then
+        print("YIPPEEE")
+      end
     end
   end
 end
@@ -164,18 +178,18 @@ function StonePlatform(x, y, l)
   local len = l
   local endLength = 0
   --gfx.spr(37, x, y)
-  table.insert(map, {37, x, y, false})
+  table.insert(State.map, {37, x, y, false})
   --gfx.spr(3, x + 16, y)
-  table.insert(map, {3, x + 16, y, true})
+  table.insert(State.map, {3, x + 16, y, true})
   for i=1, len -2 do
     endLength = x + 16 * (i + 1)
     --gfx.spr(4, endLength, y)
-    table.insert(map, {4, endLength, y, true})
+    table.insert(State.map, {4, endLength, y, true})
   end
   --gfx.spr(1, endLength + 16, y)
-  table.insert(map, {1, endLength + 16, y, true})
+  table.insert(State.map, {1, endLength + 16, y, true})
   --gfx.spr(39, endLength + 16 * 2, y)
-  table.insert(map, {39, endLength + 16 * 2, y, false})
+  table.insert(State.map, {39, endLength + 16 * 2, y, false})
 end
 
 function DirtPlatform(x, y, l)
@@ -210,21 +224,21 @@ function PitStone(x, y, w)
   local w = w
   local endLength = 0
   --gfx.spr(49, x, y)
-  table.insert(map, {49, x, y, true})
+  table.insert(State.map, {49, x, y, true})
   --gfx.spr(21, x, y + 16)
-  table.insert(map, {21, x, y+ 16})
+  table.insert(State.map, {21, x, y+ 16})
   for i=1, w do
     local newLength = x + 16 * i
     endLength = newLength
     --gfx.spr(54, newLength, y)
-    table.insert(map, {54, newLength, y})
+    table.insert(State.map, {54, newLength, y})
     --gfx.spr(22, newLength, y + 16)
-    table.insert(map, {22, newLength, y + 16})
+    table.insert(State.map, {22, newLength, y + 16})
   end
   --gfx.spr(23, endLength + 16, y + 16)
-  table.insert(map, {23, endLength + 16, y + 16})
+  table.insert(State.map, {23, endLength + 16, y + 16})
   --gfx.spr(51, endLength + 16, y)
-  table.insert(map, {52, endLength + 16, y, true})
+  table.insert(State.map, {52, endLength + 16, y, true})
 end
 
 function CollChk(p, m)
@@ -262,9 +276,13 @@ end
 function DrawGrid()
   for i=1, grid_width do
     gfx.line(grid_square * i, 0, grid_square * i, usagi.GAME_H, gfx.COLOR_RED)
-  end
-  for i=1, grid_height do
-    gfx.line(0, grid_square * i, usagi.GAME_W, grid_square * i, gfx.COLOR_RED)
+    -- commented-out not because it doesn't work, but because grids are too small for the text
+    for j=1, grid_height do
+      gfx.line(0, grid_square * j, usagi.GAME_W, grid_square * j, gfx.COLOR_RED)
+      --local text = tostring(i) .. ' ' ..tostring(j)
+      --local w, h = usagi.measure_text(text)
+      --gfx.text_ex(text, (grid_square * i), (grid_square * j), 1, 0, gfx.COLOR_WHITE, 1)
+    end
   end
 end
 
@@ -273,12 +291,13 @@ function _update(dt)
   for i=1, #tweens do
     tweens[i]:update(dt)
   end
+  MoveScan(colMap, State.characters)
 end
 
 function _draw(dt)
   gfx.clear(gfx.COLOR_BLACK)
   --StonePlatform(32, 80, 6)
-  DrawMap(map)
+  DrawMap(State.map)
   DirtPlatform(48, 112, 6)
   Chain(144, 16, 1)
   Chain(160, 16, 3)
@@ -288,5 +307,5 @@ function _draw(dt)
   CDraw(State.characters)
   CollChk(State.player, colMap)
   Outline()
-  DrawGrid()
+  --DrawGrid()
 end
