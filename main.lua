@@ -6,6 +6,7 @@ local debrisIndexes = {65, 66, 149, 161, 162, 165}
 local map = {}
 local colMap = {}
 local tweens = {}
+local charTypes = {mask = {166, 167}, tusk = {168, 169}, cultTusk = {152, 153}, spook = {183, 182}}
 local gravity = 5
 
 function _init()
@@ -15,14 +16,18 @@ function _init()
   State = {
     player = nil,
     characters = {},
-    map = {}
+    map = {},
+    time = 0
   }
   StonePlatform(32, 80, 6)
   PitStone(176, 112, 2)
   SiftMap(State.map)
   Player(48, 16)
-  Character(64, 64)
-  Character(80, 64)
+  --Character(64, 64)
+  Character(80, 64, charTypes.tusk)
+  Character(64, 64, charTypes.mask)
+  Character(96, 64, charTypes.spook)
+  Character(112, 64, charTypes.cultTusk)
 end
 
 function Player(x, y)
@@ -70,7 +75,7 @@ function PMovement(p, dt)
     player.y -= player.velY * dt
     player.velY -= gravity
   end
-  if math.floor(usagi.elapsed % 2) == 0 then
+  if math.floor(State.time % 2) == 0 then
     sprite = player.spr[2]
   else
     sprite = player.spr[1]
@@ -78,51 +83,92 @@ function PMovement(p, dt)
   gfx.spr_ex(sprite, player.x, player.y, player.flip, false, 0, gfx.COLOR_TRUE_WHITE, 1)
 end
 
-function Character(x, y)
+function Character(x, y, t)
   local char = {
     x = x,
     y = y,
-    spr = {166, 167},
+    xVel = 0,
+    yVel = 0,
+    spr = t,
     flip = false,
-    time = usagi.elapsed,
-    mov = true
+    rot = 0,
+    alpha = 1,
+    type = tostring(t),
+    time = State.time,
+    mov = true,
+    movTween = nil
   }
+  --char.movTween = tween.new(1, char, {x = char.x + 16}, 'outQuad')
   table.insert(State.characters, char)
 end
 
-function CMovement(c)
+function CMovement(c, dt)
   local chars = c
+  local tweenVal = nil
   for i=1, #chars do
-    if usagi.elapsed > chars[i].time + 2 then
-      local mover = tween.new(1, chars[i], {x = chars[i].x + 16}, 'outQuad')
-      table.insert(tweens, mover)
-      chars[i].time = usagi.elapsed
+    if chars[i].movTween then
+      tweenVal = chars[i].movTween:update(dt)
+    end
+    if State.time > chars[i].time + 2 and chars[i].mov == true then
+      local scanVal = MoveScan(colMap, chars[i])
+      if scanVal == true then
+        chars[i].movTween = tween.new(1, chars[i], {x = chars[i].x + 16}, 'outQuad')
+        chars[i].time = State.time
+      else
+        chars[i].mov = false
+        chars[i].movTween = tween.new(1, chars[i], {x = chars[i].x + 16}, 'outQuad')
+      end
+    end
+    if chars[i].mov == false then
+      if tweenVal == true then
+        chars[i].yVel += gravity * dt
+        chars[i].y += chars[i].yVel
+        chars[i].rot += math.rad(5)
+        if chars[i].y > usagi.GAME_H then
+          table.remove(State.characters, i)
+        end
+      end
+    end
+  end
+end
+
+function CMovement2(c, dt)
+  local char = c
+  for i=1, #char do
+    local getTween = char[i].movTween:update(dt)
+    if getTween == true then
+      if usagi.elapsed > char[i].time + 2 and char[i].mov == true then
+        print("okey dokey")
+        char[i].movTween = tween.new(1, char[i], {x = char[i].x + 16}, 'outQuad')
+        char[i].time = usagi.elapsed
+      end
     end
   end
 end
 
 function MoveScan(m, c)
   local map = m
-  local chars = c
-  for i=1, #chars do
-    for j=1, #map do
-      if math.floor(map[j][2]) == math.floor(chars[i].x) then
-        print("YIPPEEE")
-      end
+  local char = c
+  for i=1, #map do
+    --print(char.x)
+    print(map[i][2])
+    if char.x + 16 == map[i][2] and char.y + 16 == map[i][3] then
+      return true
     end
   end
+  return false
 end
 
 function CDraw(c)
   local chars = c
   local sprite = nil
   for i=1, #chars do
-    if math.floor(usagi.elapsed % 2) == 0 then
+    if math.floor(State.time % 2) == 0 then
       sprite = chars[i].spr[2]
     else
       sprite = chars[i].spr[1]
     end
-    gfx.spr_ex(sprite, chars[i].x, chars[i].y, chars[i].flip, false, 0, gfx.COLOR_TRUE_WHITE, 1)
+    gfx.spr_ex(sprite, chars[i].x, chars[i].y, chars[i].flip, false, chars[i].rot, gfx.COLOR_TRUE_WHITE, chars[i].alpha)
   end
 end
 
@@ -287,11 +333,9 @@ function DrawGrid()
 end
 
 function _update(dt)
-  CMovement(State.characters)
-  for i=1, #tweens do
-    tweens[i]:update(dt)
-  end
-  MoveScan(colMap, State.characters)
+  State.time += dt
+  CMovement(State.characters, dt)
+  --MoveScan(colMap, State.characters)
 end
 
 function _draw(dt)
