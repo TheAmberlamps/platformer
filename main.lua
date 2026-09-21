@@ -6,6 +6,7 @@ local debrisIndexes = {65, 66, 149, 161, 162, 165}
 local map = {}
 local colMap = {}
 local tweens = {}
+local portals = {}
 local charTypes = {mask = {166, 167}, tusk = {168, 169}, cultTusk = {152, 153}, spook = {183, 182}}
 local gravity = 5
 
@@ -23,11 +24,10 @@ function _init()
   PitStone(176, 112, 2)
   SiftMap(State.map)
   Player(48, 16)
-  --Character(64, 64)
-  Character(80, 64, charTypes.tusk)
-  Character(64, 64, charTypes.mask)
-  Character(96, 64, charTypes.spook)
-  Character(112, 64, charTypes.cultTusk)
+  Character(64, 64, charTypes.mask, true)
+  --Character(80, 64, charTypes.tusk)
+  Character(96, 64, charTypes.spook, false)
+  --Character(112, 64, charTypes.cultTusk)
 end
 
 function Player(x, y)
@@ -43,6 +43,18 @@ function Player(x, y)
     fall = true
   }
   State.player = player
+end
+
+function SpawnCheck(p)
+  local player = p
+  for i=1, #colMap do
+    if colMap[i][2] > player.x and colMap[i][2] <= player.x + 16 and player.flip == false then
+      Character(colMap[i][2], colMap[i][3] - 16, charTypes.mask, false)
+    end
+    if colMap[i][2] < player.x and colMap[i][2] > player.x - 16 and player.flip == true then
+      Character(colMap[i][2], colMap[i][3] - 16, charTypes.tusk, true)
+    end
+  end
 end
 
 function PMovement(p, dt)
@@ -71,6 +83,9 @@ function PMovement(p, dt)
     player.jmp = true
     player.velY = 60
   end
+  if input.pressed(input.BTN2) then
+    SpawnCheck(p)
+  end
   if player.jmp == true then
     player.y -= player.velY * dt
     player.velY -= gravity
@@ -83,23 +98,25 @@ function PMovement(p, dt)
   gfx.spr_ex(sprite, player.x, player.y, player.flip, false, 0, gfx.COLOR_TRUE_WHITE, 1)
 end
 
-function Character(x, y, t)
+function Character(x, y, t, f)
   local char = {
     x = x,
-    y = y,
+    y = y + 16,
     xVel = 0,
     yVel = 0,
     spr = t,
-    flip = false,
+    flip = f,
     rot = 0,
     alpha = 1,
     type = tostring(t),
     time = State.time,
-    mov = true,
+    mov = false,
+    drop = false,
     movTween = nil
   }
-  --char.movTween = tween.new(1, char, {x = char.x + 16}, 'outQuad')
+  char.movTween = tween.new(1, char, {y = char.y - 16}, 'outQuad')
   table.insert(State.characters, char)
+  MakePortal(x, y)
 end
 
 function CMovement(c, dt)
@@ -108,40 +125,69 @@ function CMovement(c, dt)
   for i=1, #chars do
     if chars[i].movTween then
       tweenVal = chars[i].movTween:update(dt)
-    end
-    if State.time > chars[i].time + 2 and chars[i].mov == true then
-      local scanVal = MoveScan(colMap, chars[i])
-      if scanVal == true then
-        chars[i].movTween = tween.new(1, chars[i], {x = chars[i].x + 16}, 'outQuad')
-        chars[i].time = State.time
-      else
-        chars[i].mov = false
-        chars[i].movTween = tween.new(1, chars[i], {x = chars[i].x + 16}, 'outQuad')
+      if chars[i].mov == false and tweenVal == true then
+        chars[i].mov = true
       end
     end
-    if chars[i].mov == false then
+    if State.time > chars[i].time + 2 and chars[i].mov == true and chars[i].drop == false then
+      local scanVal = MoveScan(colMap, chars[i])
+      if scanVal == true then
+        chars[i].time = State.time
+        if chars[i].flip == false then
+          chars[i].movTween = tween.new(1, chars[i], {x = chars[i].x + 16}, 'outQuad')
+        else
+          chars[i].movTween = tween.new(1, chars[i], {x = chars[i].x - 16}, 'outQuad')
+        end
+      else
+        chars[i].drop = true
+        if chars[i].flip == false then
+          chars[i].movTween = tween.new(1, chars[i], {x = chars[i].x + 16}, 'outQuad')
+        else
+          chars[i].movTween = tween.new(1, chars[i], {x = chars[i].x - 16}, 'outQuad')
+        end
+      end
+    end
+    if chars[i].drop == true then
       if tweenVal == true then
         chars[i].yVel += gravity * dt
         chars[i].y += chars[i].yVel
-        chars[i].rot += math.rad(5)
-        if chars[i].y > usagi.GAME_H then
-          table.remove(State.characters, i)
+        if chars[i].flip == false then
+          chars[i].rot += math.rad(5)
+        else
+          chars[i].rot -= math.rad(5)
         end
       end
     end
   end
 end
 
-function CMovement2(c, dt)
-  local char = c
-  for i=1, #char do
-    local getTween = char[i].movTween:update(dt)
-    if getTween == true then
-      if usagi.elapsed > char[i].time + 2 and char[i].mov == true then
-        print("okey dokey")
-        char[i].movTween = tween.new(1, char[i], {x = char[i].x + 16}, 'outQuad')
-        char[i].time = usagi.elapsed
+function MakePortal(x, y)
+  local portal = {
+    x = x,
+    y = y,
+    a = 0,
+    fade = false,
+    col = gfx.COLOR_RED,
+    tween = nil
+  }
+  portal.tween = tween.new(1, portal, {a = 0.8})
+  table.insert(portals, portal)
+end
+
+function DrawPortals(t, dt)
+  local port = t
+  local alpha = 1 / 16
+  local newAlpha = nil
+  for i=1, #port do
+    local fadeCheck = port[i].tween:update(dt)
+    if fadeCheck == true then
+      if port[i].fade == false then
+        port[i].fade = true
+        port[i].tween = tween.new(1, port[i], {a = 0})
       end
+    end
+    for j=1, 16 do
+      gfx.line(port[i].x, port[i].y + (j - 1), port[i].x + 16, port[i].y + (j - 1), port[i].col, alpha * j * port[i].a)
     end
   end
 end
@@ -151,8 +197,10 @@ function MoveScan(m, c)
   local char = c
   for i=1, #map do
     --print(char.x)
-    print(map[i][2])
-    if char.x + 16 == map[i][2] and char.y + 16 == map[i][3] then
+    if char.x + 16 == map[i][2] and char.y + 16 == map[i][3] and char.flip == false then
+      return true
+    end
+    if char.x - 16 == map[i][2] and char.y + 16 == map[i][3] and char.flip == true then
       return true
     end
   end
@@ -332,8 +380,18 @@ function DrawGrid()
   end
 end
 
+function Removals(t)
+  local tab = t
+  for i=#tab, 1, -1 do
+    if tab[i].y > usagi.GAME_H then
+      table.remove(tab, i)
+    end
+  end
+end
+
 function _update(dt)
   State.time += dt
+  Removals(State.characters)
   CMovement(State.characters, dt)
   --MoveScan(colMap, State.characters)
 end
@@ -341,15 +399,17 @@ end
 function _draw(dt)
   gfx.clear(gfx.COLOR_BLACK)
   --StonePlatform(32, 80, 6)
-  DrawMap(State.map)
   DirtPlatform(48, 112, 6)
   Chain(144, 16, 1)
   Chain(160, 16, 3)
   Ruin1(48, 64)
+  DrawMap(State.map)
   --PitStone(176, 112, 1)
   PMovement(State.player, dt)
   CDraw(State.characters)
   CollChk(State.player, colMap)
+  DrawPortals(portals, dt)
+  DrawMap(colMap)
   Outline()
   --DrawGrid()
 end
