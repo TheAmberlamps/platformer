@@ -21,13 +21,15 @@ function _init()
     time = 0
   }
   StonePlatform(32, 80, 6)
+  --Rope(128, 80, 0, false)
+  Rope(224, 112, 1, false)
   PitStone(176, 112, 2)
   SiftMap(State.map)
   Player(48, 16)
-  Character(64, 64, charTypes.mask, true)
-  --Character(80, 64, charTypes.tusk)
+  Character(64, 64, charTypes.mask, false)
+  Character(80, 64, charTypes.tusk, false)
   Character(96, 64, charTypes.spook, false)
-  --Character(112, 64, charTypes.cultTusk)
+  Character(112, 64, charTypes.cultTusk, false)
 end
 
 function Player(x, y)
@@ -284,6 +286,7 @@ function StonePlatform(x, y, l)
   table.insert(State.map, {1, endLength + 16, y, true})
   --gfx.spr(39, endLength + 16 * 2, y)
   table.insert(State.map, {39, endLength + 16 * 2, y, false})
+  print(endLength)
 end
 
 function DirtPlatform(x, y, l)
@@ -297,6 +300,20 @@ function DirtPlatform(x, y, l)
     gfx.spr(146, endLength, y)
   end
   gfx.spr(147, endLength + 16, y)
+end
+
+function Rope(x, y, l, f)
+  local x = x
+  local y = y
+  local len = l
+  local flip = f
+  table.insert(State.map, {8, x, y - 16, false})
+  table.insert(State.map, {9, x + 16, y - 16, false})
+  table.insert(State.map, {25, x + 16, y, false})
+  for i=1, len do
+    table.insert(State.map, {41, x + 16, y + 16 * i, false})
+  end
+  table.insert(State.map, {57, x + 16, y + 16 * (len + 1)})
 end
 
 function Chain(x, y, l)
@@ -333,6 +350,7 @@ function PitStone(x, y, w)
   table.insert(State.map, {23, endLength + 16, y + 16})
   --gfx.spr(51, endLength + 16, y)
   table.insert(State.map, {52, endLength + 16, y, true})
+  print(endLength)
 end
 
 function CollChk(p, m)
@@ -367,15 +385,34 @@ function DrawMap(m)
   end
 end
 
+local displayNum = 0
+
 function DrawGrid()
+  if input.pressed(input.BTN3) then
+    displayNum += 1
+    if displayNum > 2 then
+      displayNum = 0
+    end
+  end
   for i=1, grid_width do
     gfx.line(grid_square * i, 0, grid_square * i, usagi.GAME_H, gfx.COLOR_RED)
     -- commented-out not because it doesn't work, but because grids are too small for the text
+    -- well this might work instead
     for j=1, grid_height do
       gfx.line(0, grid_square * j, usagi.GAME_W, grid_square * j, gfx.COLOR_RED)
-      --local text = tostring(i) .. ' ' ..tostring(j)
-      --local w, h = usagi.measure_text(text)
-      --gfx.text_ex(text, (grid_square * i), (grid_square * j), 1, 0, gfx.COLOR_WHITE, 1)
+      local textW = tostring(i - 1)
+      local textH = tostring(j - 1)
+      local textChoice = ''
+      if displayNum > 0 then
+        if displayNum < 2 then
+          textChoice = textW
+        else
+          textChoice = textH
+        end
+      end
+      local wi, hi = usagi.measure_text(textW)
+      local wj, hj = usagi.measure_text(textH)
+      gfx.text_ex(textChoice, (grid_square * (i - 1)), (grid_square * (j - 1)), 1, 0, gfx.COLOR_WHITE, 1)
     end
   end
 end
@@ -411,5 +448,5 @@ function _draw(dt)
   DrawPortals(portals, dt)
   DrawMap(colMap)
   Outline()
-  --DrawGrid()
+  DrawGrid()
 end
