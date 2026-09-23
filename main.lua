@@ -9,6 +9,7 @@ local tweens = {}
 local portals = {}
 local charTypes = {mask = {166, 167}, tusk = {168, 169}, cultTusk = {152, 153}, spook = {183, 182}}
 local gravity = 5
+local intro = true
 
 function _init()
   -- Live reload preserves globals across saved edits but resets locals.
@@ -26,10 +27,11 @@ function _init()
   PitStone(176, 112, 2)
   SiftMap(State.map)
   Player(48, 16)
-  Character(64, 64, charTypes.mask, false)
-  Character(80, 64, charTypes.tusk, false)
-  Character(96, 64, charTypes.spook, false)
-  Character(112, 64, charTypes.cultTusk, false)
+  Character(96, 64, charTypes.tusk, false)
+  Character(112, 64, charTypes.spook, false)
+  Character(128, 64, charTypes.cultTusk, false)
+  intro = false
+  Character(80, 64, charTypes.mask, false)
 end
 
 function Player(x, y)
@@ -103,22 +105,26 @@ end
 function Character(x, y, t, f)
   local char = {
     x = x,
-    y = y + 16,
+    y = y,
     xVel = 0,
     yVel = 0,
     spr = t,
     flip = f,
     rot = 0,
     alpha = 1,
-    type = tostring(t),
+    type = t,
     time = State.time,
-    mov = false,
+    mov = true,
     drop = false,
     movTween = nil
   }
-  char.movTween = tween.new(1, char, {y = char.y - 16}, 'outQuad')
   table.insert(State.characters, char)
-  MakePortal(x, y)
+  if intro == false then
+    char.move = false
+    char.y += 16
+    char.movTween = tween.new(1, char, {y = char.y - 16}, 'outQuad')
+    MakePortal(x, y)
+  end
 end
 
 function CMovement(c, dt)
@@ -169,7 +175,7 @@ function MakePortal(x, y)
     y = y,
     a = 0,
     fade = false,
-    col = gfx.COLOR_RED,
+    col = gfx.COLOR_ORANGE,
     tween = nil
   }
   portal.tween = tween.new(1, portal, {a = 0.8})
@@ -421,6 +427,8 @@ function Removals(t)
   local tab = t
   for i=#tab, 1, -1 do
     if tab[i].y > usagi.GAME_H then
+      print(tab[i].type)
+      Character(96, 64, tab[i].type, false)
       table.remove(tab, i)
     end
   end
@@ -448,5 +456,5 @@ function _draw(dt)
   DrawPortals(portals, dt)
   DrawMap(colMap)
   Outline()
-  DrawGrid()
+  --DrawGrid()
 end
