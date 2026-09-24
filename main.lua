@@ -9,7 +9,7 @@ local colMap = {}
 local tweens = {}
 local portals = {}
 local skulls = {}
-local charTypes = {mask = {166, 167}, tusk = {168, 169}, cultTusk = {152, 153}, spook = {183, 182}}
+local charTypes = {mask = {166, 167}, tusk = {168, 169}, cultTusk = {152, 153}, spook = {183, 182, 184, 185}}
 local gravity = 5
 local intro = true
 
@@ -145,20 +145,20 @@ function CMovement(c, dt)
   for i=1, #chars do
     if chars[i].movTween then
       tweenVal = chars[i].movTween:update(dt)
-      if chars[i].mov == false and tweenVal == true then
-        chars[i].mov = true
-      end
+      -- commenting-out because it seems to not exist for a good reason
+      --if chars[i].mov == false and tweenVal == true then
+        --print("for some reason")
+        --chars[i].mov = true
+      --end
     end
     if chars[i].drop == true then
       if tweenVal == true then
         if chars[i].emote == true then
           chars[i].emote = false
-          print("but why")
           dandelion.Spawn("bubble_burst", chars[i].x + 8, chars[i].y + 8)
         end
         chars[i].yVel += gravity * dt
         chars[i].y += chars[i].yVel
-        print(chars[i].y)
         if chars[i].flip == false then
           chars[i].rot += math.rad(5)
         else
@@ -169,6 +169,7 @@ function CMovement(c, dt)
     if State.time > chars[i].time + 2 and chars[i].mov == true and chars[i].drop == false then
       local scanVal = MoveScan(colMap, chars[i])
       if scanVal == true then
+        print("yep")
         chars[i].time = State.time
         if chars[i].flip == false then
           chars[i].movTween = tween.new(1, chars[i], {x = chars[i].x + 16}, 'outQuad')
@@ -178,7 +179,7 @@ function CMovement(c, dt)
       elseif scanVal == 'rope' then
         Rope(chars[i].x, chars[i].y + 16, 3, false)
       elseif scanVal == 'cast' then
-        -- platform cast here
+        PlatSpell(chars[i].x, chars[i].y + 16, chars[i])
       else
         chars[i].drop = true
         chars[i].emote = true
@@ -236,7 +237,12 @@ function MoveScan(m, c)
     end
   end
   if char.rope == true then
+    char.rope = false
     return 'rope'
+  end
+  if char.cast == true then
+    char.mov = false
+    return 'cast'
   end
   return false
 end
@@ -249,6 +255,18 @@ function CDraw(c)
       sprite = chars[i].spr[2]
     else
       sprite = chars[i].spr[1]
+    end
+    if chars[i].cast == true and chars[i].mov == false then
+      if math.floor(State.time % 2) == 0 then
+        sprite = chars[i].spr[4]
+        dandelion.Spawn("plat_drip", chars[i].x + 15, chars[i].y + 16)
+        dandelion.Spawn("prayer", chars[i].x + 8, chars[i].y + 8)
+        -- lol, time to find a more appropriate place to fire these off so they don't get spammed... at least this solves why plat_drip was acting so strangely
+        -- weird that prayer is throwing nil, too... I wonder if "text" only displays numbers for some reason?
+        print("firing")
+      else
+        sprite = chars[i].spr[3]
+      end
     end
     gfx.spr_ex(sprite, chars[i].x, chars[i].y, chars[i].flip, false, chars[i].rot, gfx.COLOR_TRUE_WHITE, chars[i].alpha)
   end
@@ -353,8 +371,9 @@ function PlatSpell(x, y, c)
   local y = y
   local char = c
   for i=1, 2 do
-    table.insert(colMap, {40, x + 16, y + 16})
+    table.insert(colMap, {40, x + 16 * i, y})
   end
+  print(#colMap)
 end
 
 function Skull(x, y)
@@ -492,7 +511,7 @@ function Removals(t)
     if tab[i].y > usagi.GAME_H then
       --print(tab[i].type)
       Skull(tab[i].x, usagi.GAME_H - 16)
-      Character(96, 64, tab[i].type, false)
+      --Character(96, 64, tab[i].type, false)
       table.remove(tab, i)
     end
   end
