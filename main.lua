@@ -1,4 +1,5 @@
 local tween = require 'tween'
+local dandelion = require 'dandelion'
 local grid_square = 16
 local grid_width = 20
 local grid_height = 11 --+4 pixels
@@ -7,6 +8,7 @@ local map = {}
 local colMap = {}
 local tweens = {}
 local portals = {}
+local skulls = {}
 local charTypes = {mask = {166, 167}, tusk = {168, 169}, cultTusk = {152, 153}, spook = {183, 182}}
 local gravity = 5
 local intro = true
@@ -29,9 +31,9 @@ function _init()
   Player(48, 16)
   Character(96, 64, charTypes.tusk, false)
   Character(112, 64, charTypes.spook, false)
-  Character(128, 64, charTypes.cultTusk, false)
+  --Character(128, 64, charTypes.cultTusk, false)
+  --Character(80, 64, charTypes.mask, false)
   intro = false
-  Character(80, 64, charTypes.mask, false)
 end
 
 function Player(x, y)
@@ -114,10 +116,20 @@ function Character(x, y, t, f)
     alpha = 1,
     type = t,
     time = State.time,
+    rope = false,
+    cast = false,
+    summon = false,
     mov = true,
     drop = false,
+    emote = false,
     movTween = nil
   }
+  if char.type == charTypes.tusk then
+    char.rope = true
+  end
+  if char.type == charTypes.spook then
+    char.cast = true
+  end
   table.insert(State.characters, char)
   if intro == false then
     char.move = false
@@ -137,6 +149,23 @@ function CMovement(c, dt)
         chars[i].mov = true
       end
     end
+    if chars[i].drop == true then
+      if tweenVal == true then
+        if chars[i].emote == true then
+          chars[i].emote = false
+          print("but why")
+          dandelion.Spawn("bubble_burst", chars[i].x + 8, chars[i].y + 8)
+        end
+        chars[i].yVel += gravity * dt
+        chars[i].y += chars[i].yVel
+        print(chars[i].y)
+        if chars[i].flip == false then
+          chars[i].rot += math.rad(5)
+        else
+          chars[i].rot -= math.rad(5)
+        end
+      end
+    end
     if State.time > chars[i].time + 2 and chars[i].mov == true and chars[i].drop == false then
       local scanVal = MoveScan(colMap, chars[i])
       if scanVal == true then
@@ -146,23 +175,17 @@ function CMovement(c, dt)
         else
           chars[i].movTween = tween.new(1, chars[i], {x = chars[i].x - 16}, 'outQuad')
         end
+      elseif scanVal == 'rope' then
+        Rope(chars[i].x, chars[i].y + 16, 3, false)
+      elseif scanVal == 'cast' then
+        -- platform cast here
       else
         chars[i].drop = true
+        chars[i].emote = true
         if chars[i].flip == false then
           chars[i].movTween = tween.new(1, chars[i], {x = chars[i].x + 16}, 'outQuad')
         else
           chars[i].movTween = tween.new(1, chars[i], {x = chars[i].x - 16}, 'outQuad')
-        end
-      end
-    end
-    if chars[i].drop == true then
-      if tweenVal == true then
-        chars[i].yVel += gravity * dt
-        chars[i].y += chars[i].yVel
-        if chars[i].flip == false then
-          chars[i].rot += math.rad(5)
-        else
-          chars[i].rot -= math.rad(5)
         end
       end
     end
@@ -211,6 +234,9 @@ function MoveScan(m, c)
     if char.x - 16 == map[i][2] and char.y + 16 == map[i][3] and char.flip == true then
       return true
     end
+  end
+  if char.rope == true then
+    return 'rope'
   end
   return false
 end
@@ -322,6 +348,43 @@ function Rope(x, y, l, f)
   table.insert(State.map, {57, x + 16, y + 16 * (len + 1)})
 end
 
+function PlatSpell(x, y, c)
+  local x = x
+  local y = y
+  local char = c
+  for i=1, 2 do
+    table.insert(colMap, {40, x + 16, y + 16})
+  end
+end
+
+function Skull(x, y)
+  local x = x
+  local y = y
+  local skull = {
+    x = x,
+    y = y,
+    tween = nil,
+    a = 1
+  }
+  skull.tween = tween.new(1, skull, {y = y - 16}, 'outQuad')
+  table.insert(skulls, skull)
+end
+
+function SkullDraw(t, dt)
+  local tab = t
+  for i=#tab, 1, -1 do
+    gfx.spr(24, tab[i].x, tab[i].y, tab[i].a)
+    local check = tab[i].tween:update(dt)
+    if check == true then
+      if tab[i].a < 1 then
+        table.remove(skulls, i)
+      else
+        tab[i].tween = tween.new(1, tab[i], {a = 0}, 'outQuad')
+      end
+    end
+  end
+end
+
 function Chain(x, y, l)
   local x = x
   local y = y
@@ -427,7 +490,8 @@ function Removals(t)
   local tab = t
   for i=#tab, 1, -1 do
     if tab[i].y > usagi.GAME_H then
-      print(tab[i].type)
+      --print(tab[i].type)
+      Skull(tab[i].x, usagi.GAME_H - 16)
       Character(96, 64, tab[i].type, false)
       table.remove(tab, i)
     end
@@ -451,10 +515,12 @@ function _draw(dt)
   DrawMap(State.map)
   --PitStone(176, 112, 1)
   PMovement(State.player, dt)
+  dandelion.DrawExcept()
   CDraw(State.characters)
   CollChk(State.player, colMap)
   DrawPortals(portals, dt)
   DrawMap(colMap)
+  SkullDraw(skulls, dt)
   Outline()
   --DrawGrid()
 end
