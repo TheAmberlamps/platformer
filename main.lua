@@ -122,7 +122,7 @@ function Character(x, y, t, f)
     mov = true,
     drop = false,
     emote = false,
-    movTween = nil
+    movTween = nil,
   }
   if char.type == charTypes.tusk then
     char.rope = true
@@ -155,7 +155,7 @@ function CMovement(c, dt)
       if tweenVal == true then
         if chars[i].emote == true then
           chars[i].emote = false
-          dandelion.Spawn("bubble_burst", chars[i].x + 8, chars[i].y + 8)
+          dandelion.Spawn("bubble_burst", chars[i].x + 8, chars[i].y + 4)
         end
         chars[i].yVel += gravity * dt
         chars[i].y += chars[i].yVel
@@ -257,13 +257,11 @@ function CDraw(c)
       sprite = chars[i].spr[1]
     end
     if chars[i].cast == true and chars[i].mov == false then
-      if math.floor(State.time % 2) == 0 then
-        sprite = chars[i].spr[4]
+      if State.time > chars[i].time + 2 then
+        chars[i].time = State.time
         dandelion.Spawn("plat_drip", chars[i].x + 15, chars[i].y + 16)
-        dandelion.Spawn("prayer", chars[i].x + 8, chars[i].y + 8)
-        -- lol, time to find a more appropriate place to fire these off so they don't get spammed... at least this solves why plat_drip was acting so strangely
-        -- weird that prayer is throwing nil, too... I wonder if "text" only displays numbers for some reason?
-        print("firing")
+        dandelion.Spawn("prayer", chars[i].x + 8, chars[i].y)
+        sprite = chars[i].spr[4]
       else
         sprite = chars[i].spr[3]
       end

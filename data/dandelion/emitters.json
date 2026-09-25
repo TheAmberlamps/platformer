@@ -143,8 +143,8 @@
     "particles": [
       {
         "name": "dribble",
-        "frequency": 1,
-        "count": 1,
+        "frequency": 0.15,
+        "count": 3,
         "shape": "line",
         "length": 32
       }

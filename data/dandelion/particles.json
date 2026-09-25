@@ -180,10 +180,12 @@
     "shapes": [
       {
         "type": "text",
-        "text": "OM",
+        "text": "'\u0126'",
         "align": "center",
+        "scale": 1,
         "color": "gfx.COLOR_BLUE",
-        "outline": "gfx.COLOR_DARK_BLUE"
+        "outline": "gfx.COLOR_DARK_BLUE",
+        "alpha": "1 - (self.age / self.duration)"
       }
     ]
   },
