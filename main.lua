@@ -257,13 +257,19 @@ function CDraw(c)
       sprite = chars[i].spr[1]
     end
     if chars[i].cast == true and chars[i].mov == false then
+      if math.floor(State.time % 2) == 0 then
+        sprite = chars[i].spr[4]
+        -- lol, time to find a more appropriate place to fire these off so they don't get spammed... at least this solves why plat_drip was acting so strangely
+        -- weird that prayer is throwing nil, too... I wonder if "text" only displays numbers for some reason?
+        -- so it turns out it threw nil because to properly supply a string, it had to be a string inside a string. In fact I think that every argument in particles 
+        --print("firing")
+      else
+        sprite = chars[i].spr[3]
+      end
       if State.time > chars[i].time + 2 then
         chars[i].time = State.time
         dandelion.Spawn("plat_drip", chars[i].x + 15, chars[i].y + 16)
         dandelion.Spawn("prayer", chars[i].x + 8, chars[i].y)
-        sprite = chars[i].spr[4]
-      else
-        sprite = chars[i].spr[3]
       end
     end
     gfx.spr_ex(sprite, chars[i].x, chars[i].y, chars[i].flip, false, chars[i].rot, gfx.COLOR_TRUE_WHITE, chars[i].alpha)
