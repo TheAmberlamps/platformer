@@ -219,7 +219,15 @@ function DrawPortals(t, dt)
       end
     end
     for j=1, 16 do
-      gfx.line(port[i].x, port[i].y + (j - 1), port[i].x + 16, port[i].y + (j - 1), port[i].col, alpha * j * port[i].a)
+      local offset = 0
+      if j < 5 then
+        offset = 3
+      elseif j < 9 then
+        offset = 2
+      elseif j < 13 then
+        offset = 1
+      end
+      gfx.line(port[i].x - offset, port[i].y + (j - 1), port[i].x + 16 + offset, port[i].y + (j - 1), port[i].col, alpha * j * port[i].a)
     end
   end
 end
@@ -269,7 +277,11 @@ function CDraw(c)
       if State.time > chars[i].time + 2 then
         chars[i].time = State.time
         dandelion.Spawn("plat_drip", chars[i].x + 15, chars[i].y + 16)
-        dandelion.Spawn("prayer", chars[i].x + 8, chars[i].y)
+        if math.random() > 0.5 then
+          dandelion.Spawn("prayer1", chars[i].x + 8, chars[i].y)
+        else
+          dandelion.Spawn("prayer2", chars[i].x + 8, chars[i].y)
+        end
       end
     end
     gfx.spr_ex(sprite, chars[i].x, chars[i].y, chars[i].flip, false, chars[i].rot, gfx.COLOR_TRUE_WHITE, chars[i].alpha)

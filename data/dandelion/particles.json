@@ -174,7 +174,7 @@
     ]
   },
   {
-    "name": "prayer",
+    "name": "prayer1",
     "duration": 1,
     "dy": "-(self.age * 16)",
     "dx": "self.age * 8 * (self.random_4 > 0.5 and 1 or -1)",
@@ -187,6 +187,39 @@
         "color": "gfx.COLOR_BLUE",
         "outline": "gfx.COLOR_DARK_BLUE",
         "rotation": "self.age * (self.random_4 * 0.25 + 0.1) * (self.random_2 > 0.5 and 1 or -1)",
+        "alpha": "1 - (self.age / self.duration)"
+      }
+    ]
+  },
+  {
+    "name": "prayer2",
+    "duration": 1,
+    "dy": "-(self.age * 16)",
+    "dx": "self.age * 8 * (self.random_4 > 0.5 and 1 or -1)",
+    "shapes": [
+      {
+        "type": "text",
+        "text": "self.random_2 > 0.5 and '\u00A7' or '\u00B6'",
+        "align": "center",
+        "scale": 1,
+        "color": "gfx.COLOR_BLUE",
+        "outline": "gfx.COLOR_DARK_BLUE",
+        "rotation": "self.age * (self.random_4 * 0.25 + 0.1) * (self.random_2 > 0.5 and 1 or -1)",
+        "alpha": "1 - (self.age / self.duration)"
+      }
+    ]
+  },
+  {
+    "name": "exclamation",
+    "duration": 1,
+    "dy": "-(self.age * 16)",
+    "shapes": [
+      {
+        "type": "text",
+        "text": "'!'",
+        "align": "center",
+        "scale": 1,
+        "color": "gfx.COLOR_WHITE",
         "alpha": "1 - (self.age / self.duration)"
       }
     ]

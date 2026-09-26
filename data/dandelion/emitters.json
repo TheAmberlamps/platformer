@@ -55,6 +55,10 @@
         "radius": "8 + self.age * 50",
         "outline": true,
         "distribution": "even"
+      },
+      {
+        "name": "exclamation",
+        "count": 1
       }
     ]
   },
