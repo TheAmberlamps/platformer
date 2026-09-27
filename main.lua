@@ -29,7 +29,7 @@ function _init()
   PitStone(176, 112, 2)
   SiftMap(State.map)
   Player(48, 16)
-  Character(96, 64, charTypes.tusk, false)
+  Character(96, 64, charTypes.tusk, true)
   Character(112, 64, charTypes.spook, false)
   --Character(128, 64, charTypes.cultTusk, false)
   --Character(80, 64, charTypes.mask, false)
@@ -177,7 +177,11 @@ function CMovement(c, dt)
           chars[i].movTween = tween.new(1, chars[i], {x = chars[i].x - 16}, 'outQuad')
         end
       elseif scanVal == 'rope' then
-        Rope(chars[i].x, chars[i].y + 16, 3, false)
+        if chars[i].flip then
+          Rope(chars[i].x, chars[i].y + 16, 1, true)
+        else
+          Rope(chars[i].x, chars[i].y + 16, 3, false)
+        end
       elseif scanVal == 'cast' then
         PlatSpell(chars[i].x, chars[i].y + 16, chars[i])
       else
@@ -373,13 +377,22 @@ function Rope(x, y, l, f)
   local y = y
   local len = l
   local flip = f
-  table.insert(State.map, {8, x, y - 16, false})
-  table.insert(State.map, {9, x + 16, y - 16, false})
-  table.insert(State.map, {25, x + 16, y, false})
-  for i=1, len do
-    table.insert(State.map, {41, x + 16, y + 16 * i, false})
+  table.insert(State.map, {8, x, y - 16, false, flip})
+  if flip then
+    table.insert(State.map, {9, x - 16, y - 16, false, flip})
+    table.insert(State.map, {25, x - 16, y, false, flip})
+    for i=1, len do
+      table.insert(State.map, {41, x - 16, y + 16 * i, false, flip})
+    end
+    table.insert(State.map, {57, x - 16, y + 16 * (len + 1), false, flip})
+  else  
+    table.insert(State.map, {9, x + 16, y - 16, false, flip})
+    table.insert(State.map, {25, x + 16, y, false, flip})
+    for i=1, len do
+      table.insert(State.map, {41, x + 16, y + 16 * i, false, flip})
+    end
+    table.insert(State.map, {57, x + 16, y + 16 * (len + 1), false, flip})
   end
-  table.insert(State.map, {57, x + 16, y + 16 * (len + 1)})
 end
 
 function PlatSpell(x, y, c)
@@ -484,8 +497,13 @@ end
 
 function DrawMap(m)
   local map = m
+  local flip = false
   for i=1, #map do
-    gfx.spr(map[i][1], map[i][2], map[i][3])
+    if map[i][5] then
+      gfx.spr_ex(map[i][1], map[i][2], map[i][3], map[i][5], false, 0, gfx.COLOR_TRUE_WHITE, 1)
+    else
+      gfx.spr_ex(map[i][1], map[i][2], map[i][3], false, false, 0, gfx.COLOR_TRUE_WHITE, 1)
+    end
   end
 end
 
