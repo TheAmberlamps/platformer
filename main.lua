@@ -29,6 +29,7 @@ function _init()
   PitStone(176, 112, 2)
   SiftMap(State.map)
   Player(48, 16)
+  --Character(96, 64, charTypes.tusk, false)
   Character(96, 64, charTypes.tusk, true)
   Character(112, 64, charTypes.spook, false)
   --Character(128, 64, charTypes.cultTusk, false)
@@ -119,6 +120,7 @@ function Character(x, y, t, f)
     rope = false,
     cast = false,
     summon = false,
+    climb = false,
     mov = true,
     drop = false,
     emote = false,
@@ -136,6 +138,50 @@ function Character(x, y, t, f)
     char.y += 16
     char.movTween = tween.new(1, char, {y = char.y - 16}, 'outQuad')
     MakePortal(x, y)
+  end
+end
+
+function Climbing(m, c, t)
+  local map = m
+  local char = c
+  local tweenCheck = t
+  for i=1, #map do
+    if map[i][1] == 8 and char.x == map[i][2] and tweenCheck == true then
+      if char.flip == false then
+        char.flip = true
+        char.movTween = tween.new(1, char, {x = char.x + 16}, 'outQuad')
+      else
+        char.flip = false
+        char.movTween = tween.new(1, char, {x = char.x - 16}, 'outQuad')
+      end
+    end
+    local tile = map[i][1]
+    if tile == 9 or tile == 25 or tile == 41 then
+      if tweenCheck == true and map[i][2] == char.x and map[i][3] == char.y then
+        char.movTween = tween.new(1, char, {y = char.y + 16}, 'outQuad')
+      end
+    end
+    if tile == 57 and tweenCheck == true and map[i][2] == char.x and map[i][3] == char.y then
+      local groundVal = false
+      for i=1, #colMap do
+        if char.y + 16 == colMap[i][3] then
+          print("Victory!")
+          groundVal = true
+          if char.flip == false then
+            char.flip = true
+          else
+            char.flip = false
+          end
+        end
+      end
+      if groundVal == true then
+        char.mov = true
+        char.climb = false
+      else
+        char.drop = true
+        char.emote = true
+      end
+    end
   end
 end
 
@@ -159,6 +205,7 @@ function CMovement(c, dt)
         end
         chars[i].yVel += gravity * dt
         chars[i].y += chars[i].yVel
+        --print(chars[i].yVel)
         if chars[i].flip == false then
           chars[i].rot += math.rad(5)
         else
@@ -166,21 +213,27 @@ function CMovement(c, dt)
         end
       end
     end
+    if chars[i].climb == true then
+      -- climbing function here
+      Climbing(State.map, chars[i], tweenVal)
+    end
     if State.time > chars[i].time + 2 and chars[i].mov == true and chars[i].drop == false then
       local scanVal = MoveScan(colMap, chars[i])
       if scanVal == true then
-        print("yep")
         chars[i].time = State.time
         if chars[i].flip == false then
           chars[i].movTween = tween.new(1, chars[i], {x = chars[i].x + 16}, 'outQuad')
+          return
         else
           chars[i].movTween = tween.new(1, chars[i], {x = chars[i].x - 16}, 'outQuad')
+          return
         end
       elseif scanVal == 'rope' then
+        chars[i].climb = true
         if chars[i].flip then
           Rope(chars[i].x, chars[i].y + 16, 1, true)
         else
-          Rope(chars[i].x, chars[i].y + 16, 3, false)
+          Rope(chars[i].x, chars[i].y + 16, 0, false)
         end
       elseif scanVal == 'cast' then
         PlatSpell(chars[i].x, chars[i].y + 16, chars[i])
@@ -236,11 +289,28 @@ function DrawPortals(t, dt)
   end
 end
 
+function RopeCheck(m, c)
+    local map = m
+    local char = c
+    for i=1, #map do
+      if map[i][2] + 16 == char.x + 16 and map[i][1] == 9 then
+        print("Absolutely")
+      end
+    end
+  end
+
 function MoveScan(m, c)
   local map = m
   local char = c
+  -- if this is the collision map then this won't work
+  RopeCheck(map, char)
   for i=1, #map do
-    --print(char.x)
+    if char.x == map[i][2] and char.y + 16 == map[i][3] then
+      -- aha this is triggering twice because it's being run on both maps?
+      -- seems not... very strange
+      print('OK')
+      print(i)
+    end
     if char.x + 16 == map[i][2] and char.y + 16 == map[i][3] and char.flip == false then
       return true
     end
@@ -250,6 +320,9 @@ function MoveScan(m, c)
   end
   if char.rope == true then
     char.rope = false
+    char.mov = false
+    print(char.x / 16)
+    print(char.y / 16)
     return 'rope'
   end
   if char.cast == true then
@@ -292,7 +365,7 @@ function CDraw(c)
   end
 end
 
-function Outline()
+function Outline() 
   -- top corners
   gfx.spr(70, 0, 0)
   gfx.spr(71, 302, 0)
@@ -575,5 +648,5 @@ function _draw(dt)
   DrawMap(colMap)
   SkullDraw(skulls, dt)
   Outline()
-  --DrawGrid()
+  DrawGrid()
 end
