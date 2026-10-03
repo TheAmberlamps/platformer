@@ -185,7 +185,7 @@ function Climbing(m, c, t)
   end
 end
 
-function CMovement(c, dt)
+function CMovement(c, dt) 
   local chars = c
   local tweenVal = nil
   for i=1, #chars do
