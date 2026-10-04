@@ -87,6 +87,7 @@ function PMovement(p, dt)
     end
   end
   if input.pressed(input.BTN1) and player.jmp == false and player.fall == false then
+    sfx.play("jump")
     player.jmp = true
     player.velY = 60
   end
@@ -137,6 +138,7 @@ function Character(x, y, t, f)
     char.move = false
     char.y += 16
     char.movTween = tween.new(1, char, {y = char.y - 16}, 'outQuad')
+    sfx.play('synth')
     MakePortal(x, y)
   end
 end
@@ -215,6 +217,7 @@ function CMovement(c, dt)
     end
     if chars[i].climb == true then
       -- climbing function here
+      --print("ding-ding")
       Climbing(State.map, chars[i], tweenVal)
     end
     if State.time > chars[i].time + 2 and chars[i].mov == true and chars[i].drop == false then
@@ -240,6 +243,7 @@ function CMovement(c, dt)
       else
         chars[i].drop = true
         chars[i].emote = true
+        print("bingo")
         if chars[i].flip == false then
           chars[i].movTween = tween.new(1, chars[i], {x = chars[i].x + 16}, 'outQuad')
         else
@@ -297,7 +301,7 @@ function RopeCheck(m, c)
         print("Absolutely")
       end
     end
-  end
+end
 
 function MoveScan(m, c)
   local map = m
@@ -321,8 +325,9 @@ function MoveScan(m, c)
   if char.rope == true then
     char.rope = false
     char.mov = false
-    print(char.x / 16)
-    print(char.y / 16)
+    print('ayy')
+    --print(char.x / 16)
+    --print(char.y / 16)
     return 'rope'
   end
   if char.cast == true then
@@ -489,6 +494,7 @@ function Skull(x, y)
   }
   skull.tween = tween.new(1, skull, {y = y - 16}, 'outQuad')
   table.insert(skulls, skull)
+  sfx.play('hitHurt')
 end
 
 function SkullDraw(t, dt)
