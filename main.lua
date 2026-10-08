@@ -29,8 +29,8 @@ function _init()
   PitStone(176, 112, 2)
   SiftMap(State.map)
   Player(48, 16)
-  --Character(96, 64, charTypes.tusk, false)
-  Character(96, 64, charTypes.tusk, true)
+  Character(96, 64, charTypes.tusk, false)
+  --Character(96, 64, charTypes.tusk, true)
   Character(112, 64, charTypes.spook, false)
   --Character(128, 64, charTypes.cultTusk, false)
   --Character(80, 64, charTypes.mask, false)
@@ -143,9 +143,10 @@ function Character(x, y, t, f)
   end
 end
 
-function Climbing(m, c, t)
+function Climbing(m, c, ci, t)
   local map = m
   local char = c
+  local charInd = ci
   local tweenCheck = t
   for i=1, #map do
     if map[i][1] == 8 and char.x == map[i][2] and tweenCheck == true then
@@ -169,19 +170,27 @@ function Climbing(m, c, t)
         if char.y + 16 == colMap[i][3] then
           print("Victory!")
           groundVal = true
-          if char.flip == false then
-            char.flip = true
-          else
-            char.flip = false
-          end
+          break
         end
       end
       if groundVal == true then
         char.mov = true
         char.climb = false
+        if char.flip == false then
+            char.flip = true
+          else
+            char.flip = false
+          end
       else
+        print("so here?")
+        -- oh wait is this a reference to the value that needs to be changed instead of the actual thing?...
+        --State.characters[charInd].drop = true
+        --State.characters[charInd].emote = true
+        -- evidently not, what the fuck is happening?
         char.drop = true
         char.emote = true
+        --char.climb = false
+        --char.movTween = false
       end
     end
   end
@@ -201,13 +210,15 @@ function CMovement(c, dt)
     end
     if chars[i].drop == true then
       if tweenVal == true then
+        chars[i].yVel += gravity * dt
+        print(chars[i].yVel)
+        print(chars[i].y)
+        chars[i].y += chars[i].yVel
+        print(chars[i].y)
         if chars[i].emote == true then
           chars[i].emote = false
           dandelion.Spawn("bubble_burst", chars[i].x + 8, chars[i].y + 4)
         end
-        chars[i].yVel += gravity * dt
-        chars[i].y += chars[i].yVel
-        --print(chars[i].yVel)
         if chars[i].flip == false then
           chars[i].rot += math.rad(5)
         else
@@ -218,7 +229,7 @@ function CMovement(c, dt)
     if chars[i].climb == true then
       -- climbing function here
       --print("ding-ding")
-      Climbing(State.map, chars[i], tweenVal)
+      Climbing(State.map, chars[i], i, tweenVal)
     end
     if State.time > chars[i].time + 2 and chars[i].mov == true and chars[i].drop == false then
       local scanVal = MoveScan(colMap, chars[i])
