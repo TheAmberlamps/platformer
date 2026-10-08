@@ -29,8 +29,8 @@ function _init()
   PitStone(176, 112, 2)
   SiftMap(State.map)
   Player(48, 16)
-  Character(96, 64, charTypes.tusk, false)
-  --Character(96, 64, charTypes.tusk, true)
+  --Character(96, 64, charTypes.tusk, false)
+  Character(96, 64, charTypes.tusk, true)
   Character(112, 64, charTypes.spook, false)
   --Character(128, 64, charTypes.cultTusk, false)
   --Character(80, 64, charTypes.mask, false)
@@ -59,7 +59,7 @@ function SpawnCheck(p)
       Character(colMap[i][2], colMap[i][3] - 16, charTypes.mask, false)
     end
     if colMap[i][2] < player.x and colMap[i][2] > player.x - 16 and player.flip == true then
-      Character(colMap[i][2], colMap[i][3] - 16, charTypes.tusk, true)
+      Character(colMap[i][2], colMap[i][3] - 16, charTypes.mask, true)
     end
   end
 end
@@ -168,7 +168,7 @@ function Climbing(m, c, ci, t)
       local groundVal = false
       for i=1, #colMap do
         if char.y + 16 == colMap[i][3] then
-          print("Victory!")
+          print("Touchdown!")
           groundVal = true
           break
         end
@@ -182,13 +182,15 @@ function Climbing(m, c, ci, t)
             char.flip = false
           end
       else
-        print("so here?")
+        print("line 187, this is where the state of the character changes")
         -- oh wait is this a reference to the value that needs to be changed instead of the actual thing?...
         --State.characters[charInd].drop = true
         --State.characters[charInd].emote = true
         -- evidently not, what the fuck is happening?
         char.drop = true
         char.emote = true
+        char.climb = false
+        --char.mov = true
         --char.climb = false
         --char.movTween = false
       end
@@ -199,66 +201,65 @@ end
 function CMovement(c, dt) 
   local chars = c
   local tweenVal = nil
+  local delta = dt
   for i=1, #chars do
-    if chars[i].movTween then
-      tweenVal = chars[i].movTween:update(dt)
+    local mainChar = chars[i]
+    if mainChar.movTween then
+      tweenVal = mainChar.movTween:update(dt)
       -- commenting-out because it seems to not exist for a good reason
       --if chars[i].mov == false and tweenVal == true then
         --print("for some reason")
         --chars[i].mov = true
       --end
     end
-    if chars[i].drop == true then
+    if mainChar.drop == true then
       if tweenVal == true then
-        chars[i].yVel += gravity * dt
-        print(chars[i].yVel)
-        print(chars[i].y)
-        chars[i].y += chars[i].yVel
-        print(chars[i].y)
-        if chars[i].emote == true then
-          chars[i].emote = false
-          dandelion.Spawn("bubble_burst", chars[i].x + 8, chars[i].y + 4)
+        mainChar.yVel += gravity * delta
+        mainChar.y += mainChar.yVel
+        if mainChar.emote == true then
+          mainChar.emote = false
+          dandelion.Spawn("bubble_burst", mainChar.x + 8, mainChar.y + 4)
         end
-        if chars[i].flip == false then
-          chars[i].rot += math.rad(5)
+        if mainChar.flip == false then
+          mainChar.rot += math.rad(5)
         else
-          chars[i].rot -= math.rad(5)
+          mainChar.rot -= math.rad(5)
         end
       end
     end
-    if chars[i].climb == true then
+    if mainChar.climb == true then
       -- climbing function here
-      --print("ding-ding")
       Climbing(State.map, chars[i], i, tweenVal)
     end
-    if State.time > chars[i].time + 2 and chars[i].mov == true and chars[i].drop == false then
-      local scanVal = MoveScan(colMap, chars[i])
+    if State.time > mainChar.time + 2 and mainChar.mov == true and mainChar.drop == false then
+      local scanVal = MoveScan(colMap, mainChar)
       if scanVal == true then
-        chars[i].time = State.time
-        if chars[i].flip == false then
-          chars[i].movTween = tween.new(1, chars[i], {x = chars[i].x + 16}, 'outQuad')
+        mainChar.time = State.time
+        if mainChar.flip == false then
+          mainChar.movTween = tween.new(1, mainChar, {x = mainChar.x + 16}, 'outQuad')
           return
         else
-          chars[i].movTween = tween.new(1, chars[i], {x = chars[i].x - 16}, 'outQuad')
+          mainChar.movTween = tween.new(1, mainChar, {x = mainChar.x - 16}, 'outQuad')
           return
         end
       elseif scanVal == 'rope' then
-        chars[i].climb = true
-        if chars[i].flip then
-          Rope(chars[i].x, chars[i].y + 16, 1, true)
+        mainChar.climb = true
+        print("setting rope")
+        if mainChar.flip then
+          Rope(mainChar.x, mainChar.y + 16, 1, true)
         else
-          Rope(chars[i].x, chars[i].y + 16, 0, false)
+          Rope(mainChar.x, mainChar.y + 16, 0, false)
         end
       elseif scanVal == 'cast' then
-        PlatSpell(chars[i].x, chars[i].y + 16, chars[i])
+        PlatSpell(mainChar.x, mainChar.y + 16, mainChar)
       else
-        chars[i].drop = true
-        chars[i].emote = true
-        print("bingo")
-        if chars[i].flip == false then
-          chars[i].movTween = tween.new(1, chars[i], {x = chars[i].x + 16}, 'outQuad')
+        mainChar.drop = true
+        mainChar.emote = true
+        print("walking off a ledge")
+        if mainChar.flip == false then
+          mainChar.movTween = tween.new(1, mainChar, {x = mainChar.x + 16}, 'outQuad')
         else
-          chars[i].movTween = tween.new(1, chars[i], {x = chars[i].x - 16}, 'outQuad')
+          mainChar.movTween = tween.new(1, mainChar, {x = mainChar.x - 16}, 'outQuad')
         end
       end
     end
@@ -304,12 +305,19 @@ function DrawPortals(t, dt)
   end
 end
 
+-- this doesn't seem to work currently
 function RopeCheck(m, c)
     local map = m
     local char = c
     for i=1, #map do
-      if map[i][2] + 16 == char.x + 16 and map[i][1] == 9 then
-        print("Absolutely")
+      if char.flip == false then
+        if map[i][2] + 16 == char.x + 16 and map[i][1] == 9 then
+          print("Absolutely")
+        end
+      else
+        if map[i][2] - 16 == char.x - 16 and map[i][1] == 9 then
+          print("Trabsolutely")
+        end
       end
     end
 end
@@ -318,13 +326,14 @@ function MoveScan(m, c)
   local map = m
   local char = c
   -- if this is the collision map then this won't work
-  RopeCheck(map, char)
+  local ropeMap = State.map
+  RopeCheck(ropeMap, char)
   for i=1, #map do
     if char.x == map[i][2] and char.y + 16 == map[i][3] then
       -- aha this is triggering twice because it's being run on both maps?
       -- seems not... very strange
-      print('OK')
-      print(i)
+      --print('OK')
+      --print(i)
     end
     if char.x + 16 == map[i][2] and char.y + 16 == map[i][3] and char.flip == false then
       return true
@@ -336,7 +345,7 @@ function MoveScan(m, c)
   if char.rope == true then
     char.rope = false
     char.mov = false
-    print('ayy')
+    print("returning 'rope'")
     --print(char.x / 16)
     --print(char.y / 16)
     return 'rope'
@@ -363,7 +372,6 @@ function CDraw(c)
         -- lol, time to find a more appropriate place to fire these off so they don't get spammed... at least this solves why plat_drip was acting so strangely
         -- weird that prayer is throwing nil, too... I wonder if "text" only displays numbers for some reason?
         -- so it turns out it threw nil because to properly supply a string, it had to be a string inside a string. In fact I think that every argument in particles 
-        --print("firing")
       else
         sprite = chars[i].spr[3]
       end
@@ -445,7 +453,7 @@ function StonePlatform(x, y, l)
   table.insert(State.map, {1, endLength + 16, y, true})
   --gfx.spr(39, endLength + 16 * 2, y)
   table.insert(State.map, {39, endLength + 16 * 2, y, false})
-  print(endLength)
+  --print(endLength)
 end
 
 function DirtPlatform(x, y, l)
@@ -484,6 +492,7 @@ function Rope(x, y, l, f)
   end
 end
 
+-- currently only applies in one direction, and there's no condition to remove platforms if the spook stops casting
 function PlatSpell(x, y, c)
   local x = x
   local y = y
@@ -491,7 +500,6 @@ function PlatSpell(x, y, c)
   for i=1, 2 do
     table.insert(colMap, {40, x + 16 * i, y})
   end
-  print(#colMap)
 end
 
 function Skull(x, y)
@@ -557,7 +565,6 @@ function PitStone(x, y, w)
   table.insert(State.map, {23, endLength + 16, y + 16})
   --gfx.spr(51, endLength + 16, y)
   table.insert(State.map, {52, endLength + 16, y, true})
-  print(endLength)
 end
 
 function CollChk(p, m)
@@ -633,7 +640,6 @@ function Removals(t)
   local tab = t
   for i=#tab, 1, -1 do
     if tab[i].y > usagi.GAME_H then
-      --print(tab[i].type)
       Skull(tab[i].x, usagi.GAME_H - 16)
       --Character(96, 64, tab[i].type, false)
       table.remove(tab, i)
