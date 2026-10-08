@@ -30,7 +30,7 @@ function _init()
   SiftMap(State.map)
   Player(48, 16)
   --Character(96, 64, charTypes.tusk, false)
-  Character(96, 64, charTypes.tusk, true)
+  Character(64, 64, charTypes.tusk, true)
   Character(112, 64, charTypes.spook, false)
   --Character(128, 64, charTypes.cultTusk, false)
   --Character(80, 64, charTypes.mask, false)
@@ -170,7 +170,6 @@ function Climbing(m, c, ci, t)
         if char.y + 16 == colMap[i][3] then
           print("Touchdown!")
           groundVal = true
-          break
         end
       end
       if groundVal == true then
@@ -190,9 +189,8 @@ function Climbing(m, c, ci, t)
         char.drop = true
         char.emote = true
         char.climb = false
-        --char.mov = true
-        --char.climb = false
-        --char.movTween = false
+        char.mov = true
+        char.movTween = tween.new(1, char, {y = char.y + 16}, "outQuad")
       end
     end
   end
@@ -214,8 +212,13 @@ function CMovement(c, dt)
     end
     if mainChar.drop == true then
       if tweenVal == true then
+        print(mainChar.y)
+        print(mainChar.yVel)
         mainChar.yVel += gravity * delta
+        print(mainChar.yVel)
         mainChar.y += mainChar.yVel
+        print(mainChar.y)
+        --print(debug.traceback("Message!"))
         if mainChar.emote == true then
           mainChar.emote = false
           dandelion.Spawn("bubble_burst", mainChar.x + 8, mainChar.y + 4)
@@ -229,7 +232,7 @@ function CMovement(c, dt)
     end
     if mainChar.climb == true then
       -- climbing function here
-      Climbing(State.map, chars[i], i, tweenVal)
+      Climbing(State.map, mainChar, i, tweenVal)
     end
     if State.time > mainChar.time + 2 and mainChar.mov == true and mainChar.drop == false then
       local scanVal = MoveScan(colMap, mainChar)
@@ -357,6 +360,7 @@ function MoveScan(m, c)
   return false
 end
 
+-- seems clear, can't find a reason why this would be resetting char.y
 function CDraw(c)
   local chars = c
   local sprite = nil
