@@ -10,6 +10,7 @@ local tweens = {}
 local portals = {}
 local skulls = {}
 local charTypes = {mask = {166, 167}, tusk = {168, 169}, cultTusk = {152, 153}, spook = {183, 182, 184, 185}}
+local enemTypes = {weeper = {177, 178}, gremlin = {193, 194}, slimer = {180, 179}, necroSlime = {196, 195}}
 local gravity = 5
 local intro = true
 
@@ -20,6 +21,7 @@ function _init()
   State = {
     player = nil,
     characters = {},
+    enemies = {},
     map = {},
     time = 0
   }
@@ -28,10 +30,13 @@ function _init()
   Rope(224, 112, 1, false)
   PitStone(176, 112, 2)
   SiftMap(State.map)
+  --print(#colMap)
   Player(48, 16)
   --Character(96, 64, charTypes.tusk, false)
   Character(64, 64, charTypes.tusk, true)
-  Character(112, 64, charTypes.spook, false)
+  --Character(112, 64, charTypes.spook, false)
+  --Character(128, 64, charTypes.spook, false)
+  Enemy(128, 64, enemTypes.necroSlime, true)
   --Character(128, 64, charTypes.cultTusk, false)
   --Character(80, 64, charTypes.mask, false)
   intro = false
@@ -143,6 +148,25 @@ function Character(x, y, t, f)
   end
 end
 
+function Enemy(x, y, t, f)
+  local nme = {
+    x = x,
+    y = y,
+    xVel = 0,
+    yVel = 0,
+    spr = t,
+    flip = f,
+    rot = 0,
+    alpha = 1,
+    type = t,
+    time = State.time,
+    mov = true,
+    atk = false,
+    movTween = nil,
+  }
+  table.insert(State.enemies, nme)
+end
+
 function Climbing(m, c, ci, t)
   local map = m
   local char = c
@@ -168,6 +192,9 @@ function Climbing(m, c, ci, t)
       local groundVal = false
       for i=1, #colMap do
         if char.y + 16 == colMap[i][3] then
+          print(char.y + 16)
+          print(colMap[i][3])
+          print(colMap[i][1])
           print("Touchdown!")
           groundVal = true
         end
@@ -181,16 +208,13 @@ function Climbing(m, c, ci, t)
             char.flip = false
           end
       else
-        print("line 187, this is where the state of the character changes")
+        print("line 188, this is where the state of the character changes")
         -- oh wait is this a reference to the value that needs to be changed instead of the actual thing?...
         --State.characters[charInd].drop = true
         --State.characters[charInd].emote = true
         -- evidently not, what the fuck is happening?
         char.drop = true
         char.emote = true
-        char.climb = false
-        char.mov = true
-        char.movTween = tween.new(1, char, {y = char.y + 16}, "outQuad")
       end
     end
   end
@@ -212,13 +236,8 @@ function CMovement(c, dt)
     end
     if mainChar.drop == true then
       if tweenVal == true then
-        print(mainChar.y)
-        print(mainChar.yVel)
         mainChar.yVel += gravity * delta
-        print(mainChar.yVel)
         mainChar.y += mainChar.yVel
-        print(mainChar.y)
-        --print(debug.traceback("Message!"))
         if mainChar.emote == true then
           mainChar.emote = false
           dandelion.Spawn("bubble_burst", mainChar.x + 8, mainChar.y + 4)
@@ -249,7 +268,7 @@ function CMovement(c, dt)
         mainChar.climb = true
         print("setting rope")
         if mainChar.flip then
-          Rope(mainChar.x, mainChar.y + 16, 1, true)
+          Rope(mainChar.x, mainChar.y + 16, 3, true)
         else
           Rope(mainChar.x, mainChar.y + 16, 0, false)
         end
@@ -263,6 +282,29 @@ function CMovement(c, dt)
           mainChar.movTween = tween.new(1, mainChar, {x = mainChar.x + 16}, 'outQuad')
         else
           mainChar.movTween = tween.new(1, mainChar, {x = mainChar.x - 16}, 'outQuad')
+        end
+      end
+    end
+  end
+end
+
+function EMovement(e, dt)
+  local nmes = e
+  local tweenVal = nil
+  local delta = dt
+  for i=1, #nmes do
+    local ene = nmes[i]
+    if ene.movTween then
+      tweenVal = ene.movTween:update(delta)
+    end
+    if State.time > ene.time + 2 and ene.mov == true then
+      local scanVal = MoveScan(colMap, ene)
+      if scanVal == true then
+        ene.time = State.time
+        if ene.flip == false then
+          ene.movTween = tween.new(1, ene, {x = ene.x + 16}, 'outQuad')
+        else
+          ene.movTween = tween.new(1, ene, {x = ene.x - 16}, 'outQuad')
         end
       end
     end
@@ -329,8 +371,8 @@ function MoveScan(m, c)
   local map = m
   local char = c
   -- if this is the collision map then this won't work
-  local ropeMap = State.map
-  RopeCheck(ropeMap, char)
+  local stateMap = State.map
+  --RopeCheck(stateMap, char)
   for i=1, #map do
     if char.x == map[i][2] and char.y + 16 == map[i][3] then
       -- aha this is triggering twice because it's being run on both maps?
@@ -390,6 +432,20 @@ function CDraw(c)
       end
     end
     gfx.spr_ex(sprite, chars[i].x, chars[i].y, chars[i].flip, false, chars[i].rot, gfx.COLOR_TRUE_WHITE, chars[i].alpha)
+  end
+end
+
+function EDraw(e)
+  local enemies = e
+  local sprite = nil
+  for i=1, #enemies do
+    local nme = enemies[i]
+    if math.floor(State.time % 2) == 0 then
+      sprite = nme.spr[2]
+    else
+      sprite = nme.spr[1]
+    end
+    gfx.spr_ex(sprite, nme.x, nme.y, nme.flip, false, nme.rot, gfx.COLOR_TRUE_WHITE, nme.alpha)
   end
 end
 
@@ -556,7 +612,7 @@ function PitStone(x, y, w)
   --gfx.spr(49, x, y)
   table.insert(State.map, {49, x, y, true})
   --gfx.spr(21, x, y + 16)
-  table.insert(State.map, {21, x, y+ 16})
+  table.insert(State.map, {21, x, y + 16})
   for i=1, w do
     local newLength = x + 16 * i
     endLength = newLength
@@ -654,7 +710,11 @@ end
 function _update(dt)
   State.time += dt
   Removals(State.characters)
+  EMovement(State.enemies, dt)
   CMovement(State.characters, dt)
+  --for i=1, #State.characters do
+    --print(State.characters[i].y)
+  --end
   --MoveScan(colMap, State.characters)
 end
 
@@ -669,6 +729,7 @@ function _draw(dt)
   --PitStone(176, 112, 1)
   PMovement(State.player, dt)
   dandelion.DrawExcept()
+  EDraw(State.enemies)
   CDraw(State.characters)
   CollChk(State.player, colMap)
   DrawPortals(portals, dt)
