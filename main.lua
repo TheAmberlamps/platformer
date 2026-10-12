@@ -35,9 +35,9 @@ function _init()
   --Character(96, 64, charTypes.tusk, false)
   Character(64, 64, charTypes.tusk, true)
   --Character(112, 64, charTypes.spook, false)
-  --Character(128, 64, charTypes.spook, false)
-  Enemy(128, 64, enemTypes.necroSlime, true)
-  --Character(128, 64, charTypes.cultTusk, false)
+  Character(128, 64, charTypes.spook, false)
+  Enemy(112, 64, enemTypes.necroSlime, false)
+  Character(96, 64, charTypes.cultTusk, false)
   --Character(80, 64, charTypes.mask, false)
   intro = false
 end
@@ -123,12 +123,16 @@ function Character(x, y, t, f)
     alpha = 1,
     type = t,
     time = State.time,
+    health = 1,
+    mov = true,
+    drop = false,
+    hostile = false,
+    mAtk = false,
+    rAtk = false,
     rope = false,
     cast = false,
     summon = false,
     climb = false,
-    mov = true,
-    drop = false,
     emote = false,
     movTween = nil,
   }
@@ -137,6 +141,9 @@ function Character(x, y, t, f)
   end
   if char.type == charTypes.spook then
     char.cast = true
+  end
+  if char.type == charTypes.cultTusk then
+    char.mAtk = true
   end
   table.insert(State.characters, char)
   if intro == false then
@@ -160,8 +167,12 @@ function Enemy(x, y, t, f)
     alpha = 1,
     type = t,
     time = State.time,
+    health = 1,
     mov = true,
-    atk = false,
+    drop = false,
+    hostile = true,
+    mAtk = true,
+    rAtk = false,
     movTween = nil,
   }
   table.insert(State.enemies, nme)
@@ -220,7 +231,7 @@ function Climbing(m, c, ci, t)
   end
 end
 
-function CMovement(c, dt) 
+function Movement(c, dt) 
   local chars = c
   local tweenVal = nil
   local delta = dt
@@ -288,29 +299,6 @@ function CMovement(c, dt)
   end
 end
 
-function EMovement(e, dt)
-  local nmes = e
-  local tweenVal = nil
-  local delta = dt
-  for i=1, #nmes do
-    local ene = nmes[i]
-    if ene.movTween then
-      tweenVal = ene.movTween:update(delta)
-    end
-    if State.time > ene.time + 2 and ene.mov == true then
-      local scanVal = MoveScan(colMap, ene)
-      if scanVal == true then
-        ene.time = State.time
-        if ene.flip == false then
-          ene.movTween = tween.new(1, ene, {x = ene.x + 16}, 'outQuad')
-        else
-          ene.movTween = tween.new(1, ene, {x = ene.x - 16}, 'outQuad')
-        end
-      end
-    end
-  end
-end
-
 function MakePortal(x, y)
   local portal = {
     x = x,
@@ -370,6 +358,10 @@ end
 function MoveScan(m, c)
   local map = m
   local char = c
+  local allChars = State.characters
+  if char.hostile == false then
+    allChars = State.enemies
+  end
   -- if this is the collision map then this won't work
   local stateMap = State.map
   --RopeCheck(stateMap, char)
@@ -381,6 +373,16 @@ function MoveScan(m, c)
       --print(i)
     end
     if char.x + 16 == map[i][2] and char.y + 16 == map[i][3] and char.flip == false then
+      if char.mAtk == true then
+        for j=1, #allChars do
+          if allChars[j].x == char.x + 16 and allChars[j].y == char.y then
+            print("Yep")
+            print(allChars[j].type[1])
+            print(char.type[1])
+            -- ATTACK function here
+          end
+        end
+      end
       return true
     end
     if char.x - 16 == map[i][2] and char.y + 16 == map[i][3] and char.flip == true then
@@ -432,20 +434,6 @@ function CDraw(c)
       end
     end
     gfx.spr_ex(sprite, chars[i].x, chars[i].y, chars[i].flip, false, chars[i].rot, gfx.COLOR_TRUE_WHITE, chars[i].alpha)
-  end
-end
-
-function EDraw(e)
-  local enemies = e
-  local sprite = nil
-  for i=1, #enemies do
-    local nme = enemies[i]
-    if math.floor(State.time % 2) == 0 then
-      sprite = nme.spr[2]
-    else
-      sprite = nme.spr[1]
-    end
-    gfx.spr_ex(sprite, nme.x, nme.y, nme.flip, false, nme.rot, gfx.COLOR_TRUE_WHITE, nme.alpha)
   end
 end
 
@@ -710,8 +698,9 @@ end
 function _update(dt)
   State.time += dt
   Removals(State.characters)
-  EMovement(State.enemies, dt)
-  CMovement(State.characters, dt)
+  --EMovement(State.enemies, dt)
+  Movement(State.enemies, dt)
+  Movement(State.characters, dt)
   --for i=1, #State.characters do
     --print(State.characters[i].y)
   --end
@@ -729,7 +718,7 @@ function _draw(dt)
   --PitStone(176, 112, 1)
   PMovement(State.player, dt)
   dandelion.DrawExcept()
-  EDraw(State.enemies)
+  CDraw(State.enemies)
   CDraw(State.characters)
   CollChk(State.player, colMap)
   DrawPortals(portals, dt)
