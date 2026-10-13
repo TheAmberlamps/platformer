@@ -22,6 +22,7 @@ function _init()
     player = nil,
     characters = {},
     enemies = {},
+    attacks = {},
     map = {},
     time = 0
   }
@@ -265,7 +266,8 @@ function Movement(c, dt)
       Climbing(State.map, mainChar, i, tweenVal)
     end
     if State.time > mainChar.time + 2 and mainChar.mov == true and mainChar.drop == false then
-      local scanVal = MoveScan(colMap, mainChar)
+      local scanVal, extra = MoveScan(colMap, mainChar)
+      print(scanVal)
       if scanVal == true then
         mainChar.time = State.time
         if mainChar.flip == false then
@@ -275,6 +277,9 @@ function Movement(c, dt)
           mainChar.movTween = tween.new(1, mainChar, {x = mainChar.x - 16}, 'outQuad')
           return
         end
+      elseif scanVal == 'atk' then
+        Knife(mainChar, extra)
+        mainChar.mov = false
       elseif scanVal == 'rope' then
         mainChar.climb = true
         print("setting rope")
@@ -355,6 +360,27 @@ function RopeCheck(m, c)
     end
 end
 
+function Knife(c, e)
+  local origin = c
+  local extra = e
+  local knf = {
+    origin = origin,
+    extra = extra,
+    x = origin.x,
+    y = origin.y,
+    spr = 56,
+    flip = origin.flip,
+    stab = true,
+    movTween = nil
+  }
+  local tweenX = 16
+  if origin.flip == true then
+    tweenX = -16
+  end
+  knf.movTween = tween.new(1, knf, {x = knf.x + tweenX}, "outQuad")
+  table.insert(State.attacks, knf)
+end
+
 function MoveScan(m, c)
   local map = m
   local char = c
@@ -379,7 +405,9 @@ function MoveScan(m, c)
             print("Yep")
             print(allChars[j].type[1])
             print(char.type[1])
+            local otherGuy = allChars[j]
             -- ATTACK function here
+            return 'atk', otherGuy
           end
         end
       end
@@ -425,6 +453,7 @@ function CDraw(c)
       end
       if State.time > chars[i].time + 2 then
         chars[i].time = State.time
+        -- lol well this shouldn't be here
         dandelion.Spawn("plat_drip", chars[i].x + 15, chars[i].y + 16)
         if math.random() > 0.5 then
           dandelion.Spawn("prayer1", chars[i].x + 8, chars[i].y)
@@ -545,8 +574,10 @@ function PlatSpell(x, y, c)
   local x = x
   local y = y
   local char = c
+  -- should be a unique identifier, but even 1 in 2400 can be repeated... if it bothers you enough, store all previous idents and check against them when generatinga new one
+  char.ident = math.random() * 2400
   for i=1, 2 do
-    table.insert(colMap, {40, x + 16 * i, y})
+    table.insert(colMap, {40, x + 16 * i, y, char.ident})
   end
 end
 
@@ -695,14 +726,44 @@ function Removals(t)
   end
 end
 
+function AttackDraw(a, dt)
+  local att = a
+  local delta = dt
+  for i=1, #att do
+    local movCheck = att[i].movTween:update(delta)
+    gfx.spr_ex(att[i].spr, att[i].x, att[i].y, att[i].flip, false, 0, gfx.COLOR_TRUE_WHITE, 1)
+    if movCheck == true then
+      if att[i].flip == true and att[i].stab == true then
+        att[i].movTween = tween.new(1, att[i], {x = att[i].x + 16}, "outQuad")
+      elseif att[i].flip == false and att[i].stab == true then
+        att[i].movTween = tween.new(1, att[i], {x = att[i].x - 16}, "outQuad")
+      end
+      if att[i].stab == true and att[i].flip == true then
+        dandelion.Spawn("blood_spray", att[i].x - 8, att[i].y + 8)
+        att[i].stab = false
+        att[i].extra.drop = true
+      elseif att[i].stab == true and att[i].flip == false then
+        dandelion.Spawn("blood_spray", att[i].x + 8, att[i].y + 8)
+        att[i].stab = false
+        att[i].extra.drop = true
+      else
+        att[i].y = usagi.GAME_H + 1
+        att[i].origin.mov = true
+      end
+    end
+  end
+end
+
 function _update(dt)
   State.time += dt
   Removals(State.characters)
+  Removals(State.enemies)
+  Removals(State.attacks)
   --EMovement(State.enemies, dt)
   Movement(State.enemies, dt)
   Movement(State.characters, dt)
   --for i=1, #State.characters do
-    --print(State.characters[i].y)
+  --print(State.characters[i].y)
   --end
   --MoveScan(colMap, State.characters)
 end
@@ -719,11 +780,12 @@ function _draw(dt)
   PMovement(State.player, dt)
   dandelion.DrawExcept()
   CDraw(State.enemies)
+  AttackDraw(State.attacks, dt)
   CDraw(State.characters)
   CollChk(State.player, colMap)
   DrawPortals(portals, dt)
   DrawMap(colMap)
   SkullDraw(skulls, dt)
   Outline()
-  DrawGrid()
+  --DrawGrid()
 end

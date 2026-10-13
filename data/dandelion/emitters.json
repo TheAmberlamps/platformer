@@ -63,6 +63,18 @@
     ]
   },
   {
+    "name": "blood_spray",
+    "particles": [
+      {
+        "name": "blooddrop",
+        "count": 17,
+        "shape": "circle",
+        "radius": "8 + self.age * 50",
+        "outline": true
+      }
+    ]
+  },
+  {
     "name": "rain_emitter",
     "duration": 10,
     "dy": -125,
