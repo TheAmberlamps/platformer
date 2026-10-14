@@ -34,12 +34,12 @@ function _init()
   --print(#colMap)
   Player(48, 16)
   --Character(96, 64, charTypes.tusk, false)
-  Character(64, 64, charTypes.tusk, true)
+  --Character(64, 64, charTypes.tusk, true)
   --Character(112, 64, charTypes.spook, false)
   Character(128, 64, charTypes.spook, false)
-  Enemy(112, 64, enemTypes.necroSlime, false)
-  Character(96, 64, charTypes.cultTusk, false)
-  --Character(80, 64, charTypes.mask, false)
+  Enemy(96, 64, enemTypes.necroSlime, false)
+  --Character(96, 64, charTypes.cultTusk, false)
+  Character(80, 64, charTypes.cultTusk, false)
   intro = false
 end
 
@@ -266,8 +266,7 @@ function Movement(c, dt)
       Climbing(State.map, mainChar, i, tweenVal)
     end
     if State.time > mainChar.time + 2 and mainChar.mov == true and mainChar.drop == false then
-      local scanVal, extra = MoveScan(colMap, mainChar)
-      print(scanVal)
+      local scanVal = MoveScan(colMap, mainChar)
       if scanVal == true then
         mainChar.time = State.time
         if mainChar.flip == false then
@@ -278,7 +277,7 @@ function Movement(c, dt)
           return
         end
       elseif scanVal == 'atk' then
-        Knife(mainChar, extra)
+        Knife(mainChar)
         mainChar.mov = false
       elseif scanVal == 'rope' then
         mainChar.climb = true
@@ -360,12 +359,10 @@ function RopeCheck(m, c)
     end
 end
 
-function Knife(c, e)
+function Knife(c)
   local origin = c
-  local extra = e
   local knf = {
     origin = origin,
-    extra = extra,
     x = origin.x,
     y = origin.y,
     spr = 56,
@@ -715,13 +712,58 @@ function DrawGrid()
   end
 end
 
-function Removals(t)
+function Death(c)
+  local char = c
+  local spin = nil
+  if char.flip == true then
+    spin = math.rad(-90)
+  else
+    spin = math.rad(90)
+  end
+  char.movTween = tween.new(2, char, {y = char.y + 8, rot = spin, alpha = 0}, "outQuad")
+  Skull(char.x, char.y)
+  char.health = 0
+end
+
+function Removals(t, dt)
   local tab = t
+  local delta = dt
   for i=#tab, 1, -1 do
     if tab[i].y > usagi.GAME_H then
       Skull(tab[i].x, usagi.GAME_H - 16)
       --Character(96, 64, tab[i].type, false)
       table.remove(tab, i)
+    end
+    if tab[i].health and tab[i].health == 0  then
+      local checker = tab[i].movTween:update(delta)
+      if checker == true then
+        table.remove(tab, i)
+      end
+    end
+  end
+end
+
+function Damage(a)
+  local atk = a
+  local tab = nil
+  if atk.origin.hostile == false then
+    tab = State.enemies
+  else
+    tab = State.characters
+  end
+  for i=1, #tab do
+    if atk.flip == true then
+      if tab[i].y == atk.y and tab[i].x == atk.x then
+        dandelion.Spawn("blood_spray", tab[i].x - 8, tab[i].y + 8)
+        Death(tab[i])
+        tab[i].health = 0
+      end
+    else
+      if tab[i].y == atk.y and tab[i].x == atk.x then
+        dandelion.Spawn("blood_spray", tab[i].x + 8, tab[i].y + 8)
+        Death(tab[i])
+        tab[i].health = 0
+      end
     end
   end
 end
@@ -729,26 +771,24 @@ end
 function AttackDraw(a, dt)
   local att = a
   local delta = dt
-  for i=1, #att do
+  for i=#att, 1, -1 do
     local movCheck = att[i].movTween:update(delta)
     gfx.spr_ex(att[i].spr, att[i].x, att[i].y, att[i].flip, false, 0, gfx.COLOR_TRUE_WHITE, 1)
     if movCheck == true then
       if att[i].flip == true and att[i].stab == true then
         att[i].movTween = tween.new(1, att[i], {x = att[i].x + 16}, "outQuad")
+        att[i].stab = false
+        Damage(att[i])
       elseif att[i].flip == false and att[i].stab == true then
         att[i].movTween = tween.new(1, att[i], {x = att[i].x - 16}, "outQuad")
-      end
-      if att[i].stab == true and att[i].flip == true then
-        dandelion.Spawn("blood_spray", att[i].x - 8, att[i].y + 8)
         att[i].stab = false
-        att[i].extra.drop = true
-      elseif att[i].stab == true and att[i].flip == false then
-        dandelion.Spawn("blood_spray", att[i].x + 8, att[i].y + 8)
-        att[i].stab = false
-        att[i].extra.drop = true
+        Damage(att[i])
       else
-        att[i].y = usagi.GAME_H + 1
+        -- origin is a shallow copy, not a pointer
+        -- or is it? this seems to work just fine
+        --att[i].origin.x += 48
         att[i].origin.mov = true
+        table.remove(att, i)
       end
     end
   end
@@ -756,8 +796,8 @@ end
 
 function _update(dt)
   State.time += dt
-  Removals(State.characters)
-  Removals(State.enemies)
+  Removals(State.characters, dt)
+  Removals(State.enemies, dt)
   Removals(State.attacks)
   --EMovement(State.enemies, dt)
   Movement(State.enemies, dt)
@@ -778,7 +818,6 @@ function _draw(dt)
   DrawMap(State.map)
   --PitStone(176, 112, 1)
   PMovement(State.player, dt)
-  dandelion.DrawExcept()
   CDraw(State.enemies)
   AttackDraw(State.attacks, dt)
   CDraw(State.characters)
@@ -786,6 +825,7 @@ function _draw(dt)
   DrawPortals(portals, dt)
   DrawMap(colMap)
   SkullDraw(skulls, dt)
+  dandelion.DrawExcept()
   Outline()
-  --DrawGrid()
+  DrawGrid()
 end
