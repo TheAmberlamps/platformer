@@ -35,9 +35,10 @@ function _init()
   Player(48, 16)
   --Character(96, 64, charTypes.tusk, false)
   --Character(64, 64, charTypes.tusk, true)
+  Enemy(64, 64, enemTypes.gremlin, false)
   --Character(112, 64, charTypes.spook, false)
   Character(128, 64, charTypes.spook, false)
-  Enemy(96, 64, enemTypes.necroSlime, false)
+  Enemy(128, 64, enemTypes.necroSlime, true)
   --Character(96, 64, charTypes.cultTusk, false)
   Character(80, 64, charTypes.cultTusk, false)
   intro = false
@@ -399,9 +400,6 @@ function MoveScan(m, c)
       if char.mAtk == true then
         for j=1, #allChars do
           if allChars[j].x == char.x + 16 and allChars[j].y == char.y then
-            print("Yep")
-            print(allChars[j].type[1])
-            print(char.type[1])
             local otherGuy = allChars[j]
             -- ATTACK function here
             return 'atk', otherGuy
@@ -411,6 +409,15 @@ function MoveScan(m, c)
       return true
     end
     if char.x - 16 == map[i][2] and char.y + 16 == map[i][3] and char.flip == true then
+      if char.mAtk == true then
+        for j=1, #allChars do
+          if allChars[j].x == char.x - 16 and allChars[j].y == char.y then
+            local otherGuy = allChars[j]
+            -- ATTACK function here
+            return 'atk', otherGuy
+          end
+        end
+      end
       return true
     end
   end
@@ -754,7 +761,7 @@ function Damage(a)
   for i=1, #tab do
     if atk.flip == true then
       if tab[i].y == atk.y and tab[i].x == atk.x then
-        dandelion.Spawn("blood_spray", tab[i].x - 8, tab[i].y + 8)
+        dandelion.Spawn("blood_spray", tab[i].x + 8, tab[i].y + 8)
         Death(tab[i])
         tab[i].health = 0
       end
