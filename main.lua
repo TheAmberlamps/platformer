@@ -10,7 +10,7 @@ local tweens = {}
 local portals = {}
 local skulls = {}
 local charTypes = {mask = {166, 167}, tusk = {168, 169}, cultTusk = {152, 153}, spook = {183, 182, 184, 185}}
-local enemTypes = {weeper = {177, 178}, gremlin = {193, 194}, slimer = {180, 179}, necroSlime = {196, 195}}
+local enemTypes = {weeper = {177, 178}, gremlin = {193, 194}, slimer = {{x = 32, y = 176}, {x = 48, y = 176}, {x = 64, y = 176}}, necroSlime = {196, 195, 197}}
 local gravity = 5
 local intro = true
 
@@ -35,10 +35,10 @@ function _init()
   Player(48, 16)
   --Character(96, 64, charTypes.tusk, false)
   --Character(64, 64, charTypes.tusk, true)
-  Enemy(64, 64, enemTypes.gremlin, false)
+  --Enemy(64, 64, enemTypes.gremlin, false)
   --Character(112, 64, charTypes.spook, false)
   Character(128, 64, charTypes.spook, false)
-  Enemy(128, 64, enemTypes.necroSlime, true)
+  Enemy(128, 64, enemTypes.slimer, true)
   --Character(96, 64, charTypes.cultTusk, false)
   Character(80, 64, charTypes.cultTusk, false)
   intro = false
@@ -137,6 +137,7 @@ function Character(x, y, t, f)
     climb = false,
     emote = false,
     movTween = nil,
+    drawSpecial = false
   }
   if char.type == charTypes.tusk then
     char.rope = true
@@ -163,6 +164,8 @@ function Enemy(x, y, t, f)
     y = y,
     xVel = 0,
     yVel = 0,
+    dW = 16,
+    dH = 16,
     spr = t,
     flip = f,
     rot = 0,
@@ -173,10 +176,17 @@ function Enemy(x, y, t, f)
     mov = true,
     drop = false,
     hostile = true,
-    mAtk = true,
+    mAtk = false,
     rAtk = false,
+    inAtk = false,
     movTween = nil,
+    drawSpecial = false
   }
+  if nme.type == enemTypes.slimer or nme.type == enemTypes.necroSlime then
+    nme.alpha = 0.8
+    nme.mAtk = true
+    nme.drawSpecial = true
+  end
   table.insert(State.enemies, nme)
 end
 
@@ -247,6 +257,19 @@ function Movement(c, dt)
         --chars[i].mov = true
       --end
     end
+    if tweenVal == true and mainChar.inAtk == true then
+      if mainChar.type == enemTypes.slimer then
+        mainChar.movTween = tween.new(1, mainChar, {dH = 16}, "outQuad")
+        mainChar.inAtk = false
+        mainChar.mov = true
+        for j=1, #State.characters do
+          if mainChar.x == State.characters[j].x and mainChar.y == State.characters[j].y then
+            print("found the bastard")
+            Death(State.characters[j])
+          end
+        end
+      end
+    end
     if mainChar.drop == true then
       if tweenVal == true then
         mainChar.yVel += gravity * delta
@@ -266,10 +289,10 @@ function Movement(c, dt)
       -- climbing function here
       Climbing(State.map, mainChar, i, tweenVal)
     end
-    if State.time > mainChar.time + 2 and mainChar.mov == true and mainChar.drop == false then
-      local scanVal = MoveScan(colMap, mainChar)
+    if State.time > mainChar.time + 2 and mainChar.mov == true and mainChar.drop == false and mainChar.health > 0 then
+      local scanVal, val2 = MoveScan(colMap, mainChar)
+      mainChar.time = State.time
       if scanVal == true then
-        mainChar.time = State.time
         if mainChar.flip == false then
           mainChar.movTween = tween.new(1, mainChar, {x = mainChar.x + 16}, 'outQuad')
           return
@@ -277,9 +300,13 @@ function Movement(c, dt)
           mainChar.movTween = tween.new(1, mainChar, {x = mainChar.x - 16}, 'outQuad')
           return
         end
-      elseif scanVal == 'atk' then
-        Knife(mainChar)
-        mainChar.mov = false
+      elseif scanVal == 'mAtk' then
+        if val2 and val2.type == enemTypes.slimer then
+          SlimeAttack(mainChar)
+        else
+          Knife(mainChar)
+          mainChar.mov = false
+        end
       elseif scanVal == 'rope' then
         mainChar.climb = true
         print("setting rope")
@@ -360,6 +387,17 @@ function RopeCheck(m, c)
     end
 end
 
+function SlimeAttack(s)
+  local slime = s
+  local xMov = slime.x + 16
+  if slime.flip == true then
+    xMov = slime.x - 16
+  end
+  slime.movTween = tween.new(1, slime, {x = xMov, dH = 24}, 'outQuad')
+  slime.inAtk = true
+  slime.mov = false
+end
+
 function Knife(c)
   local origin = c
   local knf = {
@@ -379,6 +417,8 @@ function Knife(c)
   table.insert(State.attacks, knf)
 end
 
+-- so this turned into a lot more than just scanning for movement, I might want to break this up into pieces
+-- at the very least I should rework the melee attack part so that it's not running 'allchars' twice, it bothers me to look at
 function MoveScan(m, c)
   local map = m
   local char = c
@@ -402,7 +442,7 @@ function MoveScan(m, c)
           if allChars[j].x == char.x + 16 and allChars[j].y == char.y then
             local otherGuy = allChars[j]
             -- ATTACK function here
-            return 'atk', otherGuy
+            return 'mAtk', char
           end
         end
       end
@@ -414,7 +454,7 @@ function MoveScan(m, c)
           if allChars[j].x == char.x - 16 and allChars[j].y == char.y then
             local otherGuy = allChars[j]
             -- ATTACK function here
-            return 'atk', otherGuy
+            return 'mAtk', char
           end
         end
       end
@@ -466,7 +506,16 @@ function CDraw(c)
         end
       end
     end
-    gfx.spr_ex(sprite, chars[i].x, chars[i].y, chars[i].flip, false, chars[i].rot, gfx.COLOR_TRUE_WHITE, chars[i].alpha)
+    if chars[i].drawSpecial == true then
+      if chars[i].inAtk == true then
+        sprite = chars[i].spr[3]
+      end
+      -- dynamically adjusts position to account for the sprite stretching on the y-axis
+      local yOffset = chars[i].dH - 16
+      gfx.sspr_ex(sprite.x, sprite.y, 16, 16, chars[i].x, chars[i].y - yOffset, chars[i].dW, chars[i].dH, chars[i].flip, false, chars[i].rot, gfx.COLOR_TRUE_WHITE, chars[i].alpha)
+    else
+      gfx.spr_ex(sprite, chars[i].x, chars[i].y, chars[i].flip, false, chars[i].rot, gfx.COLOR_TRUE_WHITE, chars[i].alpha)
+    end
   end
 end
 
@@ -728,29 +777,34 @@ function Death(c)
     spin = math.rad(90)
   end
   char.movTween = tween.new(2, char, {y = char.y + 8, rot = spin, alpha = 0}, "outQuad")
-  Skull(char.x, char.y)
+  char.mov = false
   char.health = 0
+  Skull(char.x, char.y)
 end
 
 function Removals(t, dt)
   local tab = t
   local delta = dt
   for i=#tab, 1, -1 do
-    if tab[i].y > usagi.GAME_H then
-      Skull(tab[i].x, usagi.GAME_H - 16)
-      --Character(96, 64, tab[i].type, false)
-      table.remove(tab, i)
-    end
+    local depop = false
     if tab[i].health and tab[i].health == 0  then
       local checker = tab[i].movTween:update(delta)
       if checker == true then
-        table.remove(tab, i)
+        depop = true
       end
+    end
+    if tab[i].y > usagi.GAME_H then
+      Skull(tab[i].x, usagi.GAME_H - 16)
+      --Character(96, 64, tab[i].type, false)
+      depop = true
+    end
+    if depop == true then
+      table.remove(tab, i)
     end
   end
 end
 
-function Damage(a)
+function DamageCheck(a)
   local atk = a
   local tab = nil
   if atk.origin.hostile == false then
@@ -763,13 +817,11 @@ function Damage(a)
       if tab[i].y == atk.y and tab[i].x == atk.x then
         dandelion.Spawn("blood_spray", tab[i].x + 8, tab[i].y + 8)
         Death(tab[i])
-        tab[i].health = 0
       end
     else
       if tab[i].y == atk.y and tab[i].x == atk.x then
         dandelion.Spawn("blood_spray", tab[i].x + 8, tab[i].y + 8)
         Death(tab[i])
-        tab[i].health = 0
       end
     end
   end
@@ -785,11 +837,11 @@ function AttackDraw(a, dt)
       if att[i].flip == true and att[i].stab == true then
         att[i].movTween = tween.new(1, att[i], {x = att[i].x + 16}, "outQuad")
         att[i].stab = false
-        Damage(att[i])
+        DamageCheck(att[i])
       elseif att[i].flip == false and att[i].stab == true then
         att[i].movTween = tween.new(1, att[i], {x = att[i].x - 16}, "outQuad")
         att[i].stab = false
-        Damage(att[i])
+        DamageCheck(att[i])
       else
         -- origin is a shallow copy, not a pointer
         -- or is it? this seems to work just fine
@@ -805,7 +857,7 @@ function _update(dt)
   State.time += dt
   Removals(State.characters, dt)
   Removals(State.enemies, dt)
-  Removals(State.attacks)
+  Removals(State.attacks, dt)
   --EMovement(State.enemies, dt)
   Movement(State.enemies, dt)
   Movement(State.characters, dt)
@@ -825,14 +877,14 @@ function _draw(dt)
   DrawMap(State.map)
   --PitStone(176, 112, 1)
   PMovement(State.player, dt)
-  CDraw(State.enemies)
   AttackDraw(State.attacks, dt)
   CDraw(State.characters)
+  CDraw(State.enemies)
   CollChk(State.player, colMap)
   DrawPortals(portals, dt)
   DrawMap(colMap)
   SkullDraw(skulls, dt)
   dandelion.DrawExcept()
   Outline()
-  DrawGrid()
+  --DrawGrid()
 end
