@@ -27,20 +27,21 @@ function _init()
     time = 0
   }
   StonePlatform(32, 80, 6)
+  StonePlatform(16, 32, 2)
   --Rope(128, 80, 0, false)
   Rope(224, 112, 1, false)
   PitStone(176, 112, 2)
   SiftMap(State.map)
   --print(#colMap)
-  Player(48, 16)
+  Player(32, 16)
   --Character(96, 64, charTypes.tusk, false)
-  --Character(64, 64, charTypes.tusk, true)
+  Character(64, 64, charTypes.tusk, true)
   --Enemy(64, 64, enemTypes.gremlin, false)
   --Character(112, 64, charTypes.spook, false)
   Character(128, 64, charTypes.spook, false)
-  Enemy(128, 64, enemTypes.slimer, true)
+  Enemy(112, 64, enemTypes.slimer, true)
   --Character(96, 64, charTypes.cultTusk, false)
-  Character(80, 64, charTypes.cultTusk, false)
+  Character(64, 64, charTypes.cultTusk, false)
   intro = false
 end
 
@@ -859,12 +860,14 @@ function _update(dt)
   Removals(State.enemies, dt)
   Removals(State.attacks, dt)
   --EMovement(State.enemies, dt)
-  Movement(State.enemies, dt)
   Movement(State.characters, dt)
+  Movement(State.enemies, dt)
   --for i=1, #State.characters do
   --print(State.characters[i].y)
   --end
   --MoveScan(colMap, State.characters)
+  --print(State.time)
+  print(State.time)
 end
 
 function _draw(dt)
