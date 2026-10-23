@@ -317,7 +317,7 @@ function Movement(c, dt)
           Rope(mainChar.x, mainChar.y + 16, 0, false)
         end
       elseif scanVal == "block" then
-        print("yes")
+        print("blocked")
         mainChar.mov = false
       elseif scanVal == 'cast' then
         PlatSpell(mainChar.x, mainChar.y + 16, mainChar)
@@ -512,6 +512,14 @@ function CDraw(c)
         else
           dandelion.Spawn("prayer2", chars[i].x + 8, chars[i].y)
         end
+        local soundPick = math.random(3)
+        if soundPick == 1 then
+          sfx.play('SoftPip1')
+        elseif soundPick == 2 then
+          sfx.play('SoftPip2')
+        else
+          sfx.play('SoftPip3')
+        end
       end
     end
     if chars[i].drawSpecial == true then
@@ -635,7 +643,7 @@ function PlatSpell(x, y, c)
   local x = x
   local y = y
   local char = c
-  -- should be a unique identifier, but even 1 in 2400 can be repeated... if it bothers you enough, store all previous idents and check against them when generatinga new one
+  -- should be a unique identifier, but even 1 in 2400 can be repeated... if it bothers you enough, store all previous idents and check against them when generating a new one
   char.ident = math.random() * 2400
   for i=1, 2 do
     table.insert(colMap, {40, x + 16 * i, y, char.ident})
