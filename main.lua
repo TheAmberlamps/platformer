@@ -36,10 +36,10 @@ function _init()
   Player(32, 16)
   --Character(96, 64, charTypes.tusk, false)
   Character(64, 64, charTypes.tusk, true)
-  --Enemy(64, 64, enemTypes.gremlin, false)
+  Enemy(80, 64, enemTypes.gremlin, false)
   --Character(112, 64, charTypes.spook, false)
   Character(128, 64, charTypes.spook, false)
-  Enemy(112, 64, enemTypes.slimer, true)
+  --Enemy(112, 64, enemTypes.slimer, true)
   --Character(96, 64, charTypes.cultTusk, false)
   Character(64, 64, charTypes.cultTusk, false)
   intro = false
@@ -316,6 +316,9 @@ function Movement(c, dt)
         else
           Rope(mainChar.x, mainChar.y + 16, 0, false)
         end
+      elseif scanVal == "block" then
+        print("yes")
+        mainChar.mov = false
       elseif scanVal == 'cast' then
         PlatSpell(mainChar.x, mainChar.y + 16, mainChar)
       else
@@ -438,24 +441,28 @@ function MoveScan(m, c)
       --print(i)
     end
     if char.x + 16 == map[i][2] and char.y + 16 == map[i][3] and char.flip == false then
-      if char.mAtk == true then
-        for j=1, #allChars do
-          if allChars[j].x == char.x + 16 and allChars[j].y == char.y then
-            local otherGuy = allChars[j]
-            -- ATTACK function here
+      for j=1, #allChars do
+        if allChars[j].x == char.x + 16 and allChars[j].y == char.y then
+          local otherGuy = allChars[j]
+          -- ATTACK function here
+          if char.mAtk == true then
             return 'mAtk', char
+          else
+            return 'block', char
           end
         end
       end
       return true
     end
     if char.x - 16 == map[i][2] and char.y + 16 == map[i][3] and char.flip == true then
-      if char.mAtk == true then
-        for j=1, #allChars do
-          if allChars[j].x == char.x - 16 and allChars[j].y == char.y then
-            local otherGuy = allChars[j]
-            -- ATTACK function here
+      for j=1, #allChars do
+        if allChars[j].x == char.x - 16 and allChars[j].y == char.y then
+          local otherGuy = allChars[j]
+          -- ATTACK function here
+          if char.mAtk == true then
             return 'mAtk', char
+          else
+            return 'block', char
           end
         end
       end
@@ -859,15 +866,9 @@ function _update(dt)
   Removals(State.characters, dt)
   Removals(State.enemies, dt)
   Removals(State.attacks, dt)
-  --EMovement(State.enemies, dt)
   Movement(State.characters, dt)
   Movement(State.enemies, dt)
-  --for i=1, #State.characters do
-  --print(State.characters[i].y)
-  --end
-  --MoveScan(colMap, State.characters)
   --print(State.time)
-  print(State.time)
 end
 
 function _draw(dt)
