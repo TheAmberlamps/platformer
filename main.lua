@@ -36,10 +36,11 @@ function _init()
   Player(32, 16)
   --Character(96, 64, charTypes.tusk, false)
   Character(64, 64, charTypes.tusk, true)
-  Enemy(80, 64, enemTypes.gremlin, false)
+  --Enemy(80, 64, enemTypes.gremlin, false)
+  Character(64, 64, charTypes.spook, true)
   --Character(112, 64, charTypes.spook, false)
   Character(128, 64, charTypes.spook, false)
-  --Enemy(112, 64, enemTypes.slimer, true)
+  Enemy(112, 64, enemTypes.slimer, true)
   --Character(96, 64, charTypes.cultTusk, false)
   Character(64, 64, charTypes.cultTusk, false)
   intro = false
@@ -506,7 +507,12 @@ function CDraw(c)
       if State.time > chars[i].time + 2 then
         chars[i].time = State.time
         -- lol well this shouldn't be here
-        dandelion.Spawn("plat_drip", chars[i].x + 15, chars[i].y + 16)
+        -- oh well, make things pretty later; make them work now
+        if chars[i].flip == false then
+          dandelion.Spawn("plat_drip", chars[i].x + 16, chars[i].y + 16)
+        else
+          dandelion.Spawn("plat_drip", chars[i].x - 33, chars[i].y + 16)
+        end
         if math.random() > 0.5 then
           dandelion.Spawn("prayer1", chars[i].x + 8, chars[i].y)
         else
@@ -639,14 +645,20 @@ function Rope(x, y, l, f)
 end
 
 -- currently only applies in one direction, and there's no condition to remove platforms if the spook stops casting
+-- OK so this works in both directions now
 function PlatSpell(x, y, c)
   local x = x
   local y = y
   local char = c
   -- should be a unique identifier, but even 1 in 2400 can be repeated... if it bothers you enough, store all previous idents and check against them when generating a new one
-  char.ident = math.random() * 2400
+  local rando = math.random() * 2400
+  char.ident = math.floor(rando)
   for i=1, 2 do
-    table.insert(colMap, {40, x + 16 * i, y, char.ident})
+    if char.flip == false then
+      table.insert(colMap, {40, x + 16 * i, y, char.ident})
+    else
+      table.insert(colMap, {40, x - 16 * i, y, char.ident})
+    end
   end
 end
 
@@ -815,7 +827,19 @@ function Removals(t, dt)
       depop = true
     end
     if depop == true then
-      table.remove(tab, i)
+      if tab[i].ident then
+        print("yep")
+        print(tab[i].ident)
+        for j=#colMap, 1, -1 do
+          if tab[i].ident == colMap[j][4] then
+            print("It ain't happening")
+            table.remove(colMap, j)
+            --table.remove(tab, i)
+          end
+        end
+      else
+        table.remove(tab, i)
+      end
     end
   end
 end
