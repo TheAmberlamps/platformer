@@ -24,7 +24,8 @@ function _init()
     enemies = {},
     attacks = {},
     map = {},
-    time = 0
+    time = 0,
+    time2 = 0
   }
   StonePlatform(32, 80, 6)
   StonePlatform(16, 32, 2)
@@ -267,6 +268,13 @@ function Movement(c, dt)
         for j=1, #State.characters do
           if mainChar.x == State.characters[j].x and mainChar.y == State.characters[j].y then
             print("found the bastard")
+            if State.characters[j].ident then
+              for k=#colMap, 1, -1 do
+                if State.characters[j].ident == colMap[k][4] then
+                  table.remove(colMap, k)
+                end
+              end
+            end
             Death(State.characters[j])
           end
         end
@@ -506,13 +514,6 @@ function CDraw(c)
       end
       if State.time > chars[i].time + 2 then
         chars[i].time = State.time
-        -- lol well this shouldn't be here
-        -- oh well, make things pretty later; make them work now
-        if chars[i].flip == false then
-          dandelion.Spawn("plat_drip", chars[i].x + 16, chars[i].y + 16)
-        else
-          dandelion.Spawn("plat_drip", chars[i].x - 33, chars[i].y + 16)
-        end
         if math.random() > 0.5 then
           dandelion.Spawn("prayer1", chars[i].x + 8, chars[i].y)
         else
@@ -645,7 +646,7 @@ function Rope(x, y, l, f)
 end
 
 -- currently only applies in one direction, and there's no condition to remove platforms if the spook stops casting
--- OK so this works in both directions now
+-- OK so this works in both directions now, and platforms are being removed
 function PlatSpell(x, y, c)
   local x = x
   local y = y
@@ -754,13 +755,24 @@ end
 
 function DrawMap(m)
   local map = m
-  local flip = false
+  local timeUpdate = false
   for i=1, #map do
+    -- ugh what a mess... I don't know what I was thinking on this one, but hell, at least it works
+    -- aaaah, [5] is the x-axis flip value because [4] is a bool identifying whether it's subject to collisions or not
     if map[i][5] then
       gfx.spr_ex(map[i][1], map[i][2], map[i][3], map[i][5], false, 0, gfx.COLOR_TRUE_WHITE, 1)
     else
       gfx.spr_ex(map[i][1], map[i][2], map[i][3], false, false, 0, gfx.COLOR_TRUE_WHITE, 1)
     end
+    if type(map[i][4]) == "number" then
+      if State.time > State.time2 + 2 then
+        timeUpdate = true
+        dandelion.Spawn("plat_drip", map[i][2], map[i][3])
+      end
+    end
+  end
+  if timeUpdate then
+    State.time2 = State.time
   end
 end
 
@@ -827,19 +839,7 @@ function Removals(t, dt)
       depop = true
     end
     if depop == true then
-      if tab[i].ident then
-        print("yep")
-        print(tab[i].ident)
-        for j=#colMap, 1, -1 do
-          if tab[i].ident == colMap[j][4] then
-            print("It ain't happening")
-            table.remove(colMap, j)
-            --table.remove(tab, i)
-          end
-        end
-      else
-        table.remove(tab, i)
-      end
+      table.remove(tab, i)
     end
   end
 end
