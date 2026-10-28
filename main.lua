@@ -31,20 +31,14 @@ function _init()
   StonePlatform(16, 32, 2)
   StonePlatform(240, 144, 4)
   --Rope(128, 80, 0, false)
-  Rope(224, 112, 1, false)
-  PitStone(176, 112, 2)
+  --Rope(224, 112, 1, false)
+  PitStone(176, 128, 2)
   SiftMap(State.map)
   --print(#colMap)
   Player(32, 16)
-  --Character(96, 64, charTypes.tusk, false)
-  Character(64, 64, charTypes.tusk, true)
-  --Enemy(80, 64, enemTypes.gremlin, false)
-  Character(64, 64, charTypes.spook, true)
-  --Character(112, 64, charTypes.spook, false)
+  --Character(64, 64, charTypes.spook, true)
   Character(128, 64, charTypes.spook, false)
-  Enemy(112, 64, enemTypes.slimer, true)
-  --Character(96, 64, charTypes.cultTusk, false)
-  Character(64, 64, charTypes.cultTusk, false)
+  Character(64, 64, charTypes.tusk, true)
   intro = false
 end
 
@@ -322,9 +316,9 @@ function Movement(c, dt)
         mainChar.climb = true
         print("setting rope")
         if mainChar.flip then
-          Rope(mainChar.x, mainChar.y + 16, 3, true)
+          Rope(mainChar.x, mainChar.y + 16, true)
         else
-          Rope(mainChar.x, mainChar.y + 16, 0, false)
+          Rope(mainChar.x, mainChar.y + 16, false)
         end
       elseif scanVal == "block" then
         print("blocked")
@@ -623,11 +617,34 @@ function DirtPlatform(x, y, l)
   gfx.spr(147, endLength + 16, y)
 end
 
-function Rope(x, y, l, f)
+function Rope(x, y, f)
   local x = x
   local y = y
-  local len = l
+  local len = 0
   local flip = f
+  local groundFound = false
+  local map = colMap
+  for i = 1, #map do
+    if flip == false then
+      if map[i][2] == x + 16 and map[i][3] > y then
+        print("collision found when deploying rope: block is " .. math.floor((map[i][3] - y) / 16) .. " grid-spaces down.")
+        len = math.floor((map[i][3] - y) / 16) - 2
+        groundFound = true
+      end
+    else
+      if colMap[i][2] == x - 16 and colMap[i][3] > y then
+        print("collision found when deploying rope: block is " .. math.floor((map[i][3] - y) / 16) .. " grid-spaces down.")
+        len = math.floor((map[i][3] - y) / 16) - 2
+        groundFound = true
+      end
+    end
+  end
+  if len < 0 then
+    len = 0
+  end
+  if groundFound == false then
+    len = 3
+  end
   table.insert(State.map, {8, x, y - 16, false, flip})
   if flip then
     table.insert(State.map, {9, x - 16, y - 16, false, flip})
@@ -924,5 +941,5 @@ function _draw(dt)
   dandelion.DrawExcept()
   gfx.sspr(144, 0, 48, 32, 256, 112, 1)
   Outline()
-  --  DrawGrid()
+  --DrawGrid()
 end
