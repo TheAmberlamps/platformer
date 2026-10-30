@@ -34,11 +34,11 @@ function _init()
   --Rope(224, 112, 1, false)
   PitStone(176, 128, 2)
   SiftMap(State.map)
-  --print(#colMap)
   Player(32, 16)
-  --Character(64, 64, charTypes.spook, true)
   Character(128, 64, charTypes.spook, false)
-  Character(64, 64, charTypes.tusk, true)
+  Character(112, 64, charTypes.tusk, false)
+  --Character(64, 64, charTypes.mask, false)
+  --Character(64, 64, charTypes.tusk, true)
   intro = false
 end
 
@@ -224,10 +224,10 @@ function Climbing(m, c, ci, t)
         char.mov = true
         char.climb = false
         if char.flip == false then
-            char.flip = true
-          else
-            char.flip = false
-          end
+          char.flip = true
+        else
+          char.flip = false
+        end
       else
         print("line 188, this is where the state of the character changes")
         -- oh wait is this a reference to the value that needs to be changed instead of the actual thing?...
@@ -235,6 +235,7 @@ function Climbing(m, c, ci, t)
         --State.characters[charInd].emote = true
         -- evidently not, what the fuck is happening?
         char.drop = true
+        char.climb = false
         char.emote = true
       end
     end
@@ -382,10 +383,23 @@ end
 function RopeCheck(m, c)
     local map = m
     local char = c
+    local tally = 0
     for i=1, #map do
+      if map[i][1] == 9 then
+        tally += 1
+        print("knot x: " .. map[i][2])
+        print("knot y: " .. map[i][3])
+      end
       if char.flip == false then
-        if map[i][2] + 16 == char.x + 16 and map[i][1] == 9 then
+        -- alright this was triggering incorrectly because of the lack of an evaluation on the y-axis, which has been repaired
+        -- next up is having this act as a trigger to get a mob to climb a rope just like a tusk
+        if map[i][2] + 16 == char.x + 16 and map[i][3] == char.y and map[i][1] == 9 then
+          print("char.x + 16: " .. char.x + 16)
+          print("map[i][1]: " .. map[i][1])
+          print("map[i][2] + 16: " .. map[i][2] + 16)
           print("Absolutely")
+          --char.climb = true
+          --char.mov = false
         end
       else
         if map[i][2] - 16 == char.x - 16 and map[i][1] == 9 then
@@ -393,6 +407,7 @@ function RopeCheck(m, c)
         end
       end
     end
+    print("tally: " .. tally)
 end
 
 function SlimeAttack(s)
@@ -436,7 +451,7 @@ function MoveScan(m, c)
   end
   -- if this is the collision map then this won't work
   local stateMap = State.map
-  --RopeCheck(stateMap, char)
+  RopeCheck(stateMap, char)
   for i=1, #map do
     if char.x == map[i][2] and char.y + 16 == map[i][3] then
       -- aha this is triggering twice because it's being run on both maps?
@@ -941,5 +956,5 @@ function _draw(dt)
   dandelion.DrawExcept()
   gfx.sspr(144, 0, 48, 32, 256, 112, 1)
   Outline()
-  --DrawGrid()
+  DrawGrid()
 end
