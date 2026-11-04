@@ -35,9 +35,10 @@ function _init()
   PitStone(176, 128, 2)
   SiftMap(State.map)
   Player(32, 16)
-  Character(128, 64, charTypes.spook, false)
+  --Character(64, 64, charTypes.tusk, true)
+  --Character(96, 64, charTypes.mask, true)
   Character(112, 64, charTypes.tusk, false)
-  --Character(64, 64, charTypes.mask, false)
+  Character(80, 64, charTypes.mask, false)
   --Character(64, 64, charTypes.tusk, true)
   intro = false
 end
@@ -297,6 +298,9 @@ function Movement(c, dt)
     end
     if State.time > mainChar.time + 2 and mainChar.mov == true and mainChar.drop == false and mainChar.health > 0 then
       local scanVal, val2 = MoveScan(colMap, mainChar)
+      if mainChar.type == charTypes.mask then
+        print("scanVal: " .. tostring(scanVal))
+      end
       mainChar.time = State.time
       if scanVal == true then
         if mainChar.flip == false then
@@ -327,6 +331,10 @@ function Movement(c, dt)
       elseif scanVal == 'cast' then
         PlatSpell(mainChar.x, mainChar.y + 16, mainChar)
       else
+        local ropeVal = RopeCheck(State.map, mainChar)
+        if ropeVal == true then
+          return
+        end
         mainChar.drop = true
         mainChar.emote = true
         print("walking off a ledge")
@@ -383,31 +391,26 @@ end
 function RopeCheck(m, c)
     local map = m
     local char = c
-    local tally = 0
     for i=1, #map do
-      if map[i][1] == 9 then
-        tally += 1
-        print("knot x: " .. map[i][2])
-        print("knot y: " .. map[i][3])
-      end
       if char.flip == false then
         -- alright this was triggering incorrectly because of the lack of an evaluation on the y-axis, which has been repaired
         -- next up is having this act as a trigger to get a mob to climb a rope just like a tusk
-        if map[i][2] + 16 == char.x + 16 and map[i][3] == char.y and map[i][1] == 9 then
-          print("char.x + 16: " .. char.x + 16)
-          print("map[i][1]: " .. map[i][1])
-          print("map[i][2] + 16: " .. map[i][2] + 16)
+        -- OK this seems to be working 'as intended', but there's some sort of off-by-1 error happening; I was expecting to have to search for map id 9, not 8... the importatnt thing is that it works
+        if map[i][2] + 16 == char.x + 16 and map[i][1] == 8 then
           print("Absolutely")
-          --char.climb = true
-          --char.mov = false
+          char.climb = true
+          char.mov = false
+          return true
         end
       else
-        if map[i][2] - 16 == char.x - 16 and map[i][1] == 9 then
+        if map[i][2] - 16 == char.x - 16 and map[i][1] == 8 then
           print("Trabsolutely")
+          char.climb = true
+          char.mov = false
+          return true
         end
       end
     end
-    print("tally: " .. tally)
 end
 
 function SlimeAttack(s)
@@ -451,7 +454,7 @@ function MoveScan(m, c)
   end
   -- if this is the collision map then this won't work
   local stateMap = State.map
-  RopeCheck(stateMap, char)
+  --RopeCheck(stateMap, char)
   for i=1, #map do
     if char.x == map[i][2] and char.y + 16 == map[i][3] then
       -- aha this is triggering twice because it's being run on both maps?
