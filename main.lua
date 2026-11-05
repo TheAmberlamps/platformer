@@ -32,13 +32,15 @@ function _init()
   StonePlatform(240, 144, 4)
   --Rope(128, 80, 0, false)
   --Rope(224, 112, 1, false)
-  PitStone(176, 128, 2)
+  PitStone(144, 128, 2)
   SiftMap(State.map)
   Player(32, 16)
   --Character(64, 64, charTypes.tusk, true)
   --Character(96, 64, charTypes.mask, true)
   Character(112, 64, charTypes.tusk, false)
   Character(80, 64, charTypes.mask, false)
+  Character(64, 64, charTypes.spook, false)
+  Character(48, 64, charTypes.mask, false)
   --Character(64, 64, charTypes.tusk, true)
   intro = false
 end
@@ -143,6 +145,7 @@ function Character(x, y, t, f)
   end
   if char.type == charTypes.spook then
     char.cast = true
+    char.casting = false
   end
   if char.type == charTypes.cultTusk then
     char.mAtk = true
@@ -189,6 +192,42 @@ function Enemy(x, y, t, f)
   table.insert(State.enemies, nme)
 end
 
+function SummonMenu(x, y, w, h)
+  local x = x
+  local y = y
+  local w = w
+  local h = h
+  local arrows = {42, 43}
+  local select = {58, 59}
+  local unSelect = {44, 45}
+  local char = charTypes.mask
+  local leftT = gfx.sspr(128, 64, 32, 32, x, y)
+  local rightT = gfx.sspr(176, 64, 32, 32, x + 32 + 16 * w, y)
+  for i=1, h do
+    local leftMid = gfx.sspr(128, 96, 32, 16, x, y + 16 + 16 * i)
+    for j=1, w do
+      local midMid = gfx.sspr(160, 96, 16, 16, x + 16 + 16 * j, y + 16 + 16 * i)
+    end
+    local rightMid = gfx.sspr(176, 96, 32, 16, x + 32 + 16 * w, y + 16 + 16 * i)
+  end
+  for i=1, w do
+    local topMid = gfx.sspr(160, 64, 16, 32, x + 16 + 16 * i, y)
+    local botMid = gfx.sspr(160, 112, 16, 32, x + 16 + 16 * i, y + 32 + 16 * h)
+  end
+  local leftB = gfx.sspr(128, 112, 32, 32, x, y + 32 + 16 * h)
+  local rightB = gfx.sspr(176, 112, 32, 32, x + 32 + 16 * w, y + 32 + 16 * h)
+  local rightBut = gfx.spr(42, x + 16 + 16 * w, y + 16 + 16 * h)
+  local leftBut = gfx.spr_ex(42, x + 32, y + 16 + 16 * h, true, false, 0, gfx.COLOR_TRUE_WHITE, 1)
+  local charSprite = gfx.spr(char[1], x + 48, y + 32)
+  local text = "NAME"
+  local textW, textH = usagi.measure_text(text)
+  -- going to have to write a formula to position this text properly instead of ham-fisting it
+  local textShadow = gfx.text(text, x + 48 - textW / 4 + 1, y + 48 + 1, gfx.COLOR_BLACK)
+  local summonText = gfx.text(text, x + 48 - textW / 4, y + 48, gfx.COLOR_TRUE_WHITE)
+  local yesBut = gfx.spr(58, x + 48, y + 16 + 16 * h)
+  local noBut = gfx.spr(45, x + 48, y + 32 + 16 * h)
+end
+
 function Climbing(m, c, ci, t)
   local map = m
   local char = c
@@ -230,13 +269,13 @@ function Climbing(m, c, ci, t)
           char.flip = false
         end
       else
-        print("line 188, this is where the state of the character changes")
+        print("line " .. debug.getinfo(1, "l").currentline .. ", this is where the state of the character changes")
         -- oh wait is this a reference to the value that needs to be changed instead of the actual thing?...
         --State.characters[charInd].drop = true
         --State.characters[charInd].emote = true
         -- evidently not, what the fuck is happening?
         char.drop = true
-        char.climb = false
+        --char.climb = false
         char.emote = true
       end
     end
@@ -298,9 +337,6 @@ function Movement(c, dt)
     end
     if State.time > mainChar.time + 2 and mainChar.mov == true and mainChar.drop == false and mainChar.health > 0 then
       local scanVal, val2 = MoveScan(colMap, mainChar)
-      if mainChar.type == charTypes.mask then
-        print("scanVal: " .. tostring(scanVal))
-      end
       mainChar.time = State.time
       if scanVal == true then
         if mainChar.flip == false then
@@ -325,7 +361,7 @@ function Movement(c, dt)
         else
           Rope(mainChar.x, mainChar.y + 16, false)
         end
-      elseif scanVal == "block" then
+      elseif scanVal == 'block' then
         print("blocked")
         mainChar.mov = false
       elseif scanVal == 'cast' then
@@ -456,11 +492,9 @@ function MoveScan(m, c)
   local stateMap = State.map
   --RopeCheck(stateMap, char)
   for i=1, #map do
-    if char.x == map[i][2] and char.y + 16 == map[i][3] then
-      -- aha this is triggering twice because it's being run on both maps?
-      -- seems not... very strange
-      --print('OK')
-      --print(i)
+    if char.x == map[i][2] and char.y == map[i][3] and map[i][1] == 22 then
+      Death(char)
+      return
     end
     if char.x + 16 == map[i][2] and char.y + 16 == map[i][3] and char.flip == false then
       for j=1, #allChars do
@@ -500,7 +534,13 @@ function MoveScan(m, c)
     return 'rope'
   end
   if char.cast == true then
+    local val = RopeCheck(State.map, char)
+    print("val: " .. tostring(val))
+    if val == true then
+      return false
+    end
     char.mov = false
+    char.casting = true
     return 'cast'
   end
   return false
@@ -516,7 +556,7 @@ function CDraw(c)
     else
       sprite = chars[i].spr[1]
     end
-    if chars[i].cast == true and chars[i].mov == false then
+    if chars[i].cast == true and chars[i].casting == true then
       if math.floor(State.time % 2) == 0 then
         sprite = chars[i].spr[4]
         -- lol, time to find a more appropriate place to fire these off so they don't get spammed... at least this solves why plat_drip was acting so strangely
@@ -958,6 +998,7 @@ function _draw(dt)
   SkullDraw(skulls, dt)
   dandelion.DrawExcept()
   gfx.sspr(144, 0, 48, 32, 256, 112, 1)
+  SummonMenu(128, 48, 3, 3)
   Outline()
-  DrawGrid()
+  --DrawGrid()
 end
