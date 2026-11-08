@@ -24,6 +24,8 @@ function _init()
     enemies = {},
     attacks = {},
     map = {},
+    onMenu = true, --ok so what does that mean
+    menuPos = 4,
     time = 0,
     time2 = 0
   }
@@ -198,9 +200,87 @@ function SummonMenu(x, y, w, h)
   local w = w
   local h = h
   local arrows = {42, 43}
+  local arrowStateL = arrows[1]
+  local arrowStateR = arrows[1]
   local select = {58, 59}
+  local selectState = select[1]
   local unSelect = {44, 45}
+  local unSelectState = unSelect[2]
+  local userInput = nil
+  local selection = State.menuPos
+  -- Funny, it's only watching this do exactly what I wanted it to that I realise this isn't what I really need... this should move a kind of selector around the buttons; their actual visual state should only change when pressed
+  -- Looking good regardless
+  function InputHandler()
+    if input.pressed(input.LEFT) then
+      userInput = 'LEFT'
+    end
+    if input.pressed(input.RIGHT) then
+      userInput = 'RIGHT'
+    end
+    if input.pressed(input.UP) then
+      userInput = 'UP'
+    end
+    if input.pressed(input.DOWN) then
+      userInput = 'DOWN'
+    end
+    if input.pressed(input.BTN1) then
+      userInput = 'SELECT'
+    end
+    if userInput == 'DOWN' or userInput == 'UP' then
+      if selection == 4 then
+        selection = 2
+      else
+        selection = 4
+      end
+    end
+    if userInput == 'LEFT' and selection ~= 4 then
+      if selection < 2 then
+        selection = 3
+      elseif selection > 2 then
+        selection = 2
+      else
+        selection = 1
+      end
+    end
+    if userInput == 'RIGHT' and selection ~= 4 then
+      if selection < 2 then
+        selection = 2
+      elseif selection > 2 then
+        selection = 1
+      else
+        selection = 3
+      end
+    end
+    if selection == 1 then
+      arrowStateL = arrows[2]
+    else
+      arrowStateL = arrows[1]
+    end
+    if selection == 2 then
+      selectState = select[2]
+    else
+      selectState = select[1]
+    end
+    if selection == 3 then
+      arrowStateR = arrows[2]
+    else
+      arrowStateR = arrows[1]
+    end
+    if selection == 4 then
+      unSelectState = unSelect[2]
+    else
+      unSelectState = unSelect[1]
+    end
+  end
+  InputHandler()
   local char = charTypes.mask
+  -- length operator doesn't work on tables of named tables; Lua condiders them a dictionary and parses them differently than a standard table
+  --print("charTypes length: " .. #charTypes)
+  --for name, content in pairs(charTypes) do
+    --print("name: " .. name)
+    --print("content[1]: " .. tostring(content[1]))
+  --end
+
   local leftT = gfx.sspr(128, 64, 32, 32, x, y)
   local rightT = gfx.sspr(176, 64, 32, 32, x + 32 + 16 * w, y)
   for i=1, h do
@@ -216,16 +296,19 @@ function SummonMenu(x, y, w, h)
   end
   local leftB = gfx.sspr(128, 112, 32, 32, x, y + 32 + 16 * h)
   local rightB = gfx.sspr(176, 112, 32, 32, x + 32 + 16 * w, y + 32 + 16 * h)
-  local rightBut = gfx.spr(42, x + 16 + 16 * w, y + 16 + 16 * h)
-  local leftBut = gfx.spr_ex(42, x + 32, y + 16 + 16 * h, true, false, 0, gfx.COLOR_TRUE_WHITE, 1)
+  
+  -- buttons and text
+  local rightBut = gfx.spr(arrowStateR, x + 16 + 16 * w, y + 16 + 16 * h)
+  local leftBut = gfx.spr_ex(arrowStateL, x + 32, y + 16 + 16 * h, true, false, 0, gfx.COLOR_TRUE_WHITE, 1)
   local charSprite = gfx.spr(char[1], x + 48, y + 32)
   local text = "NAME"
   local textW, textH = usagi.measure_text(text)
   -- going to have to write a formula to position this text properly instead of ham-fisting it
-  local textShadow = gfx.text(text, x + 48 - textW / 4 + 1, y + 48 + 1, gfx.COLOR_BLACK)
+  --local textShadow = gfx.text(text, x + 48 - textW / 4 + 1, y + 48 + 1, gfx.COLOR_BLACK)
   local summonText = gfx.text(text, x + 48 - textW / 4, y + 48, gfx.COLOR_TRUE_WHITE)
-  local yesBut = gfx.spr(58, x + 48, y + 16 + 16 * h)
-  local noBut = gfx.spr(45, x + 48, y + 32 + 16 * h)
+  local yesBut = gfx.spr(selectState, x + 48, y + 16 + 16 * h)
+  local noBut = gfx.spr(unSelectState, x + 48, y + 32 + 16 * h)
+  State.menuPos = selection
 end
 
 function Climbing(m, c, ci, t)
@@ -424,6 +507,7 @@ function DrawPortals(t, dt)
 end
 
 -- this doesn't seem to work currently
+-- well it does now
 function RopeCheck(m, c)
     local map = m
     local char = c
@@ -970,24 +1054,25 @@ function AttackDraw(a, dt)
 end
 
 function _update(dt)
-  State.time += dt
-  Removals(State.characters, dt)
-  Removals(State.enemies, dt)
-  Removals(State.attacks, dt)
-  Movement(State.characters, dt)
-  Movement(State.enemies, dt)
-  --print(State.time)
+  if State.onMenu == false then
+    State.time += dt
+    Removals(State.characters, dt)
+    Removals(State.enemies, dt)
+    Removals(State.attacks, dt)
+    Movement(State.characters, dt)
+    Movement(State.enemies, dt)
+  else
+
+  end
 end
 
 function _draw(dt)
   gfx.clear(gfx.COLOR_BLACK)
-  --StonePlatform(32, 80, 6)
   DirtPlatform(48, 112, 6)
   Chain(144, 16, 1)
   Chain(160, 16, 3)
   Ruin1(48, 64)
   DrawMap(State.map)
-  --PitStone(176, 112, 1)
   PMovement(State.player, dt)
   AttackDraw(State.attacks, dt)
   CDraw(State.characters)
