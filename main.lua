@@ -207,7 +207,10 @@ function SummonMenu(x, y, w, h)
   local unSelect = {44, 45}
   local unSelectState = unSelect[2]
   local userInput = nil
+  local selected = false
   local selection = State.menuPos
+  local selectionDirs = {{x + 32, y + 16 + 16 * h}, {x + 48, y + 16 + 16 * h}, {x + 16 + 16 * w, y + 16 + 16 * h}, {x + 48, y + 32 + 16 * h}}
+  local selectionPos = selectionDirs[selection]
   -- Funny, it's only watching this do exactly what I wanted it to that I realise this isn't what I really need... this should move a kind of selector around the buttons; their actual visual state should only change when pressed
   -- Looking good regardless
   function InputHandler()
@@ -219,54 +222,73 @@ function SummonMenu(x, y, w, h)
     end
     if input.pressed(input.UP) then
       userInput = 'UP'
+      sfx.play("movSelect")
     end
     if input.pressed(input.DOWN) then
       userInput = 'DOWN'
+      sfx.play("movSelect")
     end
     if input.pressed(input.BTN1) then
       userInput = 'SELECT'
+      sfx.play("menuSelect")
+    end
+    if input.held(input.BTN1) then
+      userInput= 'SELECT'
+    end
+    if userInput == 'SELECT' then
+      selected = true
     end
     if userInput == 'DOWN' or userInput == 'UP' then
       if selection == 4 then
         selection = 2
+        selectionPos = selectionDirs[2]
       else
         selection = 4
+        selectionPos = selectionDirs[4]
       end
     end
     if userInput == 'LEFT' and selection ~= 4 then
+      sfx.play("movSelect")
       if selection < 2 then
         selection = 3
+        selectionPos = selectionDirs[3]
       elseif selection > 2 then
         selection = 2
+        selectionPos = selectionDirs[2]
       else
         selection = 1
+        selectionPos = selectionDirs[1]
       end
     end
     if userInput == 'RIGHT' and selection ~= 4 then
+      sfx.play("movSelect")
       if selection < 2 then
         selection = 2
+        selectionPos = selectionDirs[2]
       elseif selection > 2 then
         selection = 1
+        selectionPos = selectionDirs[1]
       else
         selection = 3
+        selectionPos = selectionDirs[3]
       end
     end
-    if selection == 1 then
+    if selection == 1 and selected == true then
       arrowStateL = arrows[2]
     else
       arrowStateL = arrows[1]
     end
-    if selection == 2 then
+    if selection == 2 and selected == true then
       selectState = select[2]
     else
       selectState = select[1]
     end
-    if selection == 3 then
+    if selection == 3 and selected == true then
       arrowStateR = arrows[2]
     else
       arrowStateR = arrows[1]
     end
-    if selection == 4 then
+    if selection == 4 and selected == true then
       unSelectState = unSelect[2]
     else
       unSelectState = unSelect[1]
@@ -308,6 +330,7 @@ function SummonMenu(x, y, w, h)
   local summonText = gfx.text(text, x + 48 - textW / 4, y + 48, gfx.COLOR_TRUE_WHITE)
   local yesBut = gfx.spr(selectState, x + 48, y + 16 + 16 * h)
   local noBut = gfx.spr(unSelectState, x + 48, y + 32 + 16 * h)
+  local currentSelect = gfx.spr(46, selectionPos[1], selectionPos[2])
   State.menuPos = selection
 end
 
@@ -1083,7 +1106,9 @@ function _draw(dt)
   SkullDraw(skulls, dt)
   dandelion.DrawExcept()
   gfx.sspr(144, 0, 48, 32, 256, 112, 1)
-  SummonMenu(128, 48, 3, 3)
+  if State.onMenu == true then
+    SummonMenu(128, 48, 3, 3)
+  end
   Outline()
   --DrawGrid()
 end
