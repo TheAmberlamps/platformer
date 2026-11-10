@@ -9,11 +9,12 @@ local colMap = {}
 local tweens = {}
 local portals = {}
 local skulls = {}
+local summonIndex = 1
 local charTypes = {mask = {166, 167}, tusk = {168, 169}, cultTusk = {152, 153}, spook = {183, 182, 184, 185}}
+local charTypes2 = {{'MASK', 166, 167}, {'TUSK', 168, 169}, {'CULT-TUSK', 152, 153}, {'SPOOK', 183, 182, 184, 185}}
 local enemTypes = {weeper = {177, 178}, gremlin = {193, 194}, slimer = {{x = 32, y = 176}, {x = 48, y = 176}, {x = 64, y = 176}}, necroSlime = {196, 195, 197}}
 local gravity = 5
 local intro = true
-
 function _init()
   -- Live reload preserves globals across saved edits but resets locals.
   -- Stash mutable game state in a capitalized global like `State` so it
@@ -233,7 +234,7 @@ function SummonMenu(x, y, w, h)
       sfx.play("menuSelect")
     end
     if input.held(input.BTN1) then
-      userInput= 'SELECT'
+      userInput = 'SELECT'
     end
     if userInput == 'SELECT' then
       selected = true
@@ -275,6 +276,11 @@ function SummonMenu(x, y, w, h)
     end
     if selection == 1 and selected == true then
       arrowStateL = arrows[2]
+      print("wheeeeee")
+      summonIndex -= 1
+      if summonIndex < 1 then
+        summonIndex = #charTypes2
+      end
     else
       arrowStateL = arrows[1]
     end
@@ -285,6 +291,10 @@ function SummonMenu(x, y, w, h)
     end
     if selection == 3 and selected == true then
       arrowStateR = arrows[2]
+      summonIndex += 1
+      if summonIndex > #charTypes2 then
+        summonIndex = 1
+      end
     else
       arrowStateR = arrows[1]
     end
@@ -295,7 +305,7 @@ function SummonMenu(x, y, w, h)
     end
   end
   InputHandler()
-  local char = charTypes.mask
+
   -- length operator doesn't work on tables of named tables; Lua condiders them a dictionary and parses them differently than a standard table
   --print("charTypes length: " .. #charTypes)
   --for name, content in pairs(charTypes) do
@@ -319,15 +329,17 @@ function SummonMenu(x, y, w, h)
   local leftB = gfx.sspr(128, 112, 32, 32, x, y + 32 + 16 * h)
   local rightB = gfx.sspr(176, 112, 32, 32, x + 32 + 16 * w, y + 32 + 16 * h)
   
-  -- buttons and text
+  -- buttons, text and sprite
   local rightBut = gfx.spr(arrowStateR, x + 16 + 16 * w, y + 16 + 16 * h)
   local leftBut = gfx.spr_ex(arrowStateL, x + 32, y + 16 + 16 * h, true, false, 0, gfx.COLOR_TRUE_WHITE, 1)
-  local charSprite = gfx.spr(char[1], x + 48, y + 32)
-  local text = "NAME"
+  local char = charTypes2[summonIndex]
+  local charSprite = gfx.spr(char[2], x + 48, y + 32)
+  local text = char[1]
   local textW, textH = usagi.measure_text(text)
   -- going to have to write a formula to position this text properly instead of ham-fisting it
-  --local textShadow = gfx.text(text, x + 48 - textW / 4 + 1, y + 48 + 1, gfx.COLOR_BLACK)
-  local summonText = gfx.text(text, x + 48 - textW / 4, y + 48, gfx.COLOR_TRUE_WHITE)
+  -- done
+  local textShadow = gfx.text(text, x + 48 - (textW / 2) + 9, y + 48 + 1, gfx.COLOR_BLACK)
+  local summonText = gfx.text(text, x + 48 - (textW / 2) + 8, y + 48, gfx.COLOR_TRUE_WHITE)
   local yesBut = gfx.spr(selectState, x + 48, y + 16 + 16 * h)
   local noBut = gfx.spr(unSelectState, x + 48, y + 32 + 16 * h)
   local currentSelect = gfx.spr(46, selectionPos[1], selectionPos[2])
