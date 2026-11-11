@@ -11,7 +11,7 @@ local portals = {}
 local skulls = {}
 local summonIndex = 1
 local charTypes = {mask = {166, 167}, tusk = {168, 169}, cultTusk = {152, 153}, spook = {183, 182, 184, 185}}
-local charTypes2 = {{'MASK', 166, 167}, {'TUSK', 168, 169}, {'CULT-TUSK', 152, 153}, {'SPOOK', 183, 182, 184, 185}}
+local charTypes2 = {{'mask', 166, 167}, {'tusk', 168, 169}, {'cultTusk', 152, 153}, {'spook', 183, 182, 184, 185}}
 local enemTypes = {weeper = {177, 178}, gremlin = {193, 194}, slimer = {{x = 32, y = 176}, {x = 48, y = 176}, {x = 64, y = 176}}, necroSlime = {196, 195, 197}}
 local gravity = 5
 local intro = true
@@ -41,9 +41,9 @@ function _init()
   --Character(64, 64, charTypes.tusk, true)
   --Character(96, 64, charTypes.mask, true)
   Character(112, 64, charTypes.tusk, false)
-  Character(80, 64, charTypes.mask, false)
-  Character(64, 64, charTypes.spook, false)
-  Character(48, 64, charTypes.mask, false)
+  --Character(80, 64, charTypes.mask, false)
+  --Character(64, 64, charTypes.spook, false)
+  --Character(48, 64, charTypes.mask, false)
   --Character(64, 64, charTypes.tusk, true)
   intro = false
 end
@@ -195,11 +195,13 @@ function Enemy(x, y, t, f)
   table.insert(State.enemies, nme)
 end
 
-function SummonMenu(x, y, w, h)
+function SummonMenu(x, y, dx, dy, w, h)
   local x = x
   local y = y
   local w = w
   local h = h
+  local dx = dx
+  local dy = dy
   local arrows = {42, 43}
   local arrowStateL = arrows[1]
   local arrowStateR = arrows[1]
@@ -212,6 +214,11 @@ function SummonMenu(x, y, w, h)
   local selection = State.menuPos
   local selectionDirs = {{x + 32, y + 16 + 16 * h}, {x + 48, y + 16 + 16 * h}, {x + 16 + 16 * w, y + 16 + 16 * h}, {x + 48, y + 32 + 16 * h}}
   local selectionPos = selectionDirs[selection]
+  local char = charTypes2[summonIndex]
+  local rawText = char[1]
+  local text = string.upper(rawText)
+  local textW, textH = usagi.measure_text(text)
+  
   -- Funny, it's only watching this do exactly what I wanted it to that I realise this isn't what I really need... this should move a kind of selector around the buttons; their actual visual state should only change when pressed
   -- Looking good regardless
   function InputHandler()
@@ -232,6 +239,13 @@ function SummonMenu(x, y, w, h)
     if input.pressed(input.BTN1) then
       userInput = 'SELECT'
       sfx.play("menuSelect")
+      if selection == 4 then
+        State.onMenu = false
+      end
+      if selection == 2 then
+        Character(dx, dy, charTypes[rawText], false)
+        State.onMenu = false
+      end
     end
     if input.held(input.BTN1) then
       userInput = 'SELECT'
@@ -304,7 +318,8 @@ function SummonMenu(x, y, w, h)
       unSelectState = unSelect[1]
     end
   end
-  InputHandler()
+
+  local inputResult = InputHandler()
 
   -- length operator doesn't work on tables of named tables; Lua condiders them a dictionary and parses them differently than a standard table
   --print("charTypes length: " .. #charTypes)
@@ -332,12 +347,7 @@ function SummonMenu(x, y, w, h)
   -- buttons, text and sprite
   local rightBut = gfx.spr(arrowStateR, x + 16 + 16 * w, y + 16 + 16 * h)
   local leftBut = gfx.spr_ex(arrowStateL, x + 32, y + 16 + 16 * h, true, false, 0, gfx.COLOR_TRUE_WHITE, 1)
-  local char = charTypes2[summonIndex]
   local charSprite = gfx.spr(char[2], x + 48, y + 32)
-  local text = char[1]
-  local textW, textH = usagi.measure_text(text)
-  -- going to have to write a formula to position this text properly instead of ham-fisting it
-  -- done
   local textShadow = gfx.text(text, x + 48 - (textW / 2) + 9, y + 48 + 1, gfx.COLOR_BLACK)
   local summonText = gfx.text(text, x + 48 - (textW / 2) + 8, y + 48, gfx.COLOR_TRUE_WHITE)
   local yesBut = gfx.spr(selectState, x + 48, y + 16 + 16 * h)
@@ -1119,7 +1129,8 @@ function _draw(dt)
   dandelion.DrawExcept()
   gfx.sspr(144, 0, 48, 32, 256, 112, 1)
   if State.onMenu == true then
-    SummonMenu(128, 48, 3, 3)
+    -- arguments 3 and 4 have to be dynamicized
+    SummonMenu(128, 48, 48, 64, 3, 3)
   end
   Outline()
   --DrawGrid()
